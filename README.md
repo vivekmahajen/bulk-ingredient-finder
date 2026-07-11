@@ -62,7 +62,10 @@ Prerequisites: **Node ≥ 20 + pnpm 10**, **Python 3.12**, **PostgreSQL 16**.
 | `GET /readyz`                 | Readiness probe (checks DB; 200 or 503)         |
 | `GET /api/v1/ping`            | Versioned API liveness ping                      |
 | `GET /api/v1/ingredients`     | List active ingredients (org-scoped) — PR-2      |
+| `POST /api/v1/ingredients`    | Add ingredient (detect/translate/aliases) — PR-3 |
 | `GET /api/v1/ingredients/{id}`| Ingredient + aliases — PR-2                       |
+| `POST /api/v1/ingredients/{id}/aliases` | Add a user alias (correction) — PR-3   |
+| `DELETE …/aliases/{alias_id}` | Remove an alias (correction) — PR-3              |
 | `GET /api/v1/stores`          | List active stores (org-scoped) — PR-2           |
 | `GET /api/v1/stores/{id}`     | Store detail — PR-2                               |
 | `GET /docs`                   | Swagger UI                                        |
