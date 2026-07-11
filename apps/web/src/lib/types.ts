@@ -14,12 +14,7 @@ export type Category =
 export type DefaultUnit = "kg" | "g" | "l" | "ml" | "each" | "case" | "bag";
 
 export type PurchaseFrequency =
-  | "daily"
-  | "twice_weekly"
-  | "weekly"
-  | "biweekly"
-  | "monthly"
-  | "quarterly";
+  "daily" | "twice_weekly" | "weekly" | "biweekly" | "monthly" | "quarterly";
 
 export type AliasKind = "translation" | "transliteration" | "synonym" | "user_alias";
 

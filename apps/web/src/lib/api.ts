@@ -15,9 +15,7 @@ export interface Problem {
   [key: string]: unknown;
 }
 
-export type ApiResult<T> =
-  | { ok: true; data: T }
-  | { ok: false; status: number; problem: Problem };
+export type ApiResult<T> = { ok: true; data: T } | { ok: false; status: number; problem: Problem };
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 

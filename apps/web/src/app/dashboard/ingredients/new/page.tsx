@@ -1,11 +1,11 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import Link from "next/link"
-import { useRouter } from "next/navigation"
+import { useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Card,
   CardHeader,
@@ -13,23 +13,18 @@ import {
   CardDescription,
   CardContent,
   CardFooter,
-} from "@/components/ui/card"
+} from "@/components/ui/card";
 import {
   Select,
   SelectTrigger,
   SelectValue,
   SelectContent,
   SelectItem,
-} from "@/components/ui/select"
-import { Badge } from "@/components/ui/badge"
-import { useToast } from "@/components/ui/use-toast"
-import { apiPost } from "@/lib/api"
-import type {
-  Ingredient,
-  Category,
-  DefaultUnit,
-  PurchaseFrequency,
-} from "@/lib/types"
+} from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/components/ui/use-toast";
+import { apiPost } from "@/lib/api";
+import type { Ingredient, Category, DefaultUnit, PurchaseFrequency } from "@/lib/types";
 
 /** Languages we surface for `source_lang`, each rendered in its own script. */
 const LANGUAGES = [
@@ -42,9 +37,9 @@ const LANGUAGES = [
   { value: "vi", label: "Tiếng Việt" },
   { value: "ko", label: "한국어" },
   { value: "pt", label: "Português" },
-] as const satisfies ReadonlyArray<{ value: string; label: string }>
+] as const satisfies ReadonlyArray<{ value: string; label: string }>;
 
-type LangValue = (typeof LANGUAGES)[number]["value"]
+type LangValue = (typeof LANGUAGES)[number]["value"];
 
 const CATEGORIES = [
   "protein",
@@ -56,7 +51,7 @@ const CATEGORIES = [
   "beverage",
   "packaging",
   "other",
-] as const satisfies ReadonlyArray<Category>
+] as const satisfies ReadonlyArray<Category>;
 
 const DEFAULT_UNITS = [
   "kg",
@@ -66,7 +61,7 @@ const DEFAULT_UNITS = [
   "each",
   "case",
   "bag",
-] as const satisfies ReadonlyArray<DefaultUnit>
+] as const satisfies ReadonlyArray<DefaultUnit>;
 
 const PURCHASE_FREQUENCIES = [
   { value: "daily", label: "Daily" },
@@ -75,107 +70,101 @@ const PURCHASE_FREQUENCIES = [
   { value: "biweekly", label: "Biweekly" },
   { value: "monthly", label: "Monthly" },
   { value: "quarterly", label: "Quarterly" },
-] as const satisfies ReadonlyArray<{ value: PurchaseFrequency; label: string }>
+] as const satisfies ReadonlyArray<{ value: PurchaseFrequency; label: string }>;
 
 function langLabel(value: string): string {
-  return LANGUAGES.find((l) => l.value === value)?.label ?? value
+  return LANGUAGES.find((l) => l.value === value)?.label ?? value;
 }
 
 interface CreateIngredientBody {
-  display_name: string
-  source_lang: string
-  category: Category
-  default_unit: DefaultUnit
-  purchase_frequency: PurchaseFrequency
-  par_level?: number
+  display_name: string;
+  source_lang: string;
+  category: Category;
+  default_unit: DefaultUnit;
+  purchase_frequency: PurchaseFrequency;
+  par_level?: number;
 }
 
 export default function NewIngredientPage() {
-  const router = useRouter()
-  const { toast } = useToast()
+  const router = useRouter();
+  const { toast } = useToast();
 
   // Controlled form state.
-  const [displayName, setDisplayName] = useState<string>("")
-  const [sourceLang, setSourceLang] = useState<LangValue>("en")
-  const [category, setCategory] = useState<Category>("produce")
-  const [defaultUnit, setDefaultUnit] = useState<DefaultUnit>("kg")
-  const [purchaseFrequency, setPurchaseFrequency] =
-    useState<PurchaseFrequency>("weekly")
-  const [parLevel, setParLevel] = useState<string>("")
+  const [displayName, setDisplayName] = useState<string>("");
+  const [sourceLang, setSourceLang] = useState<LangValue>("en");
+  const [category, setCategory] = useState<Category>("produce");
+  const [defaultUnit, setDefaultUnit] = useState<DefaultUnit>("kg");
+  const [purchaseFrequency, setPurchaseFrequency] = useState<PurchaseFrequency>("weekly");
+  const [parLevel, setParLevel] = useState<string>("");
 
-  const [submitting, setSubmitting] = useState<boolean>(false)
-  const [created, setCreated] = useState<Ingredient | null>(null)
-  const [langChoices, setLangChoices] = useState<string | null>(null)
+  const [submitting, setSubmitting] = useState<boolean>(false);
+  const [created, setCreated] = useState<Ingredient | null>(null);
+  const [langChoices, setLangChoices] = useState<string | null>(null);
 
   async function submit(langOverride?: LangValue): Promise<void> {
-    const trimmed = displayName.trim()
+    const trimmed = displayName.trim();
     if (!trimmed) {
       toast({
         title: "Name required",
         description: "Enter a name for the ingredient.",
         variant: "destructive",
-      })
-      return
+      });
+      return;
     }
 
-    const lang = langOverride ?? sourceLang
+    const lang = langOverride ?? sourceLang;
     const body: CreateIngredientBody = {
       display_name: trimmed,
       source_lang: lang,
       category,
       default_unit: defaultUnit,
       purchase_frequency: purchaseFrequency,
-    }
+    };
     if (parLevel.trim() !== "") {
-      const n = Number(parLevel)
+      const n = Number(parLevel);
       if (!Number.isNaN(n)) {
-        body.par_level = n
+        body.par_level = n;
       }
     }
 
-    setSubmitting(true)
-    const result = await apiPost<Ingredient>("/api/v1/ingredients", body)
-    setSubmitting(false)
+    setSubmitting(true);
+    const result = await apiPost<Ingredient>("/api/v1/ingredients", body);
+    setSubmitting(false);
 
     if (result.ok) {
-      const ing = result.data
-      setCreated(ing)
-      setLangChoices(null)
-      toast({ title: `Added ${ing.canonical_name_en}` })
+      const ing = result.data;
+      setCreated(ing);
+      setLangChoices(null);
+      toast({ title: `Added ${ing.canonical_name_en}` });
       // Reset for quick repeated entry; stay on-page.
-      setDisplayName("")
-      setSourceLang("en")
-      setParLevel("")
-      return
+      setDisplayName("");
+      setSourceLang("en");
+      setParLevel("");
+      return;
     }
 
     // Language ambiguity → inline chooser that re-submits on pick.
-    if (
-      result.status === 422 &&
-      result.problem.title === "Ambiguous language"
-    ) {
-      setLangChoices(
-        result.problem.detail ?? "Pick the language this name is written in."
-      )
-      return
+    if (result.status === 422 && result.problem.title === "Ambiguous language") {
+      setLangChoices(result.problem.detail ?? "Pick the language this name is written in.");
+      return;
     }
 
-    setLangChoices(null)
+    setLangChoices(null);
     toast({
       title: result.problem.title,
       description: result.problem.detail,
       variant: "destructive",
-    })
+    });
   }
 
   function onSubmit(e: React.FormEvent<HTMLFormElement>): void {
-    e.preventDefault()
-    void submit()
+    e.preventDefault();
+    void submit();
   }
 
   function chooseLang(value: LangValue): void {
-    setSourceLang(value)
-    void submit(value)
+    setSourceLang(value);
+    void submit(value);
   }
 
   return (
@@ -183,13 +172,11 @@ export default function NewIngredientPage() {
       <div className="space-y-1">
         <Link
           href="/dashboard/ingredients"
-          className="text-sm text-muted-foreground hover:text-foreground"
+          className="text-muted-foreground hover:text-foreground text-sm"
         >
           ← All ingredients
         </Link>
-        <h1 className="text-2xl font-semibold tracking-tight">
-          Add Ingredient
-        </h1>
+        <h1 className="text-2xl font-semibold tracking-tight">Add Ingredient</h1>
       </div>
 
       <Card>
@@ -197,18 +184,15 @@ export default function NewIngredientPage() {
           <CardHeader>
             <CardTitle>New ingredient</CardTitle>
             <CardDescription>
-              Type the name in any language — we&apos;ll canonicalize it and
-              keep the original as a searchable alias.
+              Type the name in any language — we&apos;ll canonicalize it and keep the original as a
+              searchable alias.
             </CardDescription>
           </CardHeader>
 
           <CardContent className="space-y-6">
             {/* Display name + language */}
             <div className="space-y-2">
-              <label
-                htmlFor="display_name"
-                className="text-sm font-medium leading-none"
-              >
+              <label htmlFor="display_name" className="text-sm font-medium leading-none">
                 Name
               </label>
               <div className="flex gap-2">
@@ -220,10 +204,7 @@ export default function NewIngredientPage() {
                   autoComplete="off"
                   className="flex-1"
                 />
-                <Select
-                  value={sourceLang}
-                  onValueChange={(v) => setSourceLang(v as LangValue)}
-                >
+                <Select value={sourceLang} onValueChange={(v) => setSourceLang(v as LangValue)}>
                   <SelectTrigger className="w-[140px]" aria-label="Language">
                     <SelectValue placeholder="Language" />
                   </SelectTrigger>
@@ -241,13 +222,8 @@ export default function NewIngredientPage() {
             {/* Category + default unit */}
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <label className="text-sm font-medium leading-none">
-                  Category
-                </label>
-                <Select
-                  value={category}
-                  onValueChange={(v) => setCategory(v as Category)}
-                >
+                <label className="text-sm font-medium leading-none">Category</label>
+                <Select value={category} onValueChange={(v) => setCategory(v as Category)}>
                   <SelectTrigger aria-label="Category">
                     <SelectValue placeholder="Category" />
                   </SelectTrigger>
@@ -262,13 +238,8 @@ export default function NewIngredientPage() {
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-medium leading-none">
-                  Default unit
-                </label>
-                <Select
-                  value={defaultUnit}
-                  onValueChange={(v) => setDefaultUnit(v as DefaultUnit)}
-                >
+                <label className="text-sm font-medium leading-none">Default unit</label>
+                <Select value={defaultUnit} onValueChange={(v) => setDefaultUnit(v as DefaultUnit)}>
                   <SelectTrigger aria-label="Default unit">
                     <SelectValue placeholder="Unit" />
                   </SelectTrigger>
@@ -285,12 +256,10 @@ export default function NewIngredientPage() {
 
             {/* Purchase frequency — radio-style toggle buttons */}
             <div className="space-y-2">
-              <span className="text-sm font-medium leading-none">
-                Purchase frequency
-              </span>
+              <span className="text-sm font-medium leading-none">Purchase frequency</span>
               <div className="flex flex-wrap gap-2" role="radiogroup">
                 {PURCHASE_FREQUENCIES.map((f) => {
-                  const selected = purchaseFrequency === f.value
+                  const selected = purchaseFrequency === f.value;
                   return (
                     <Button
                       key={f.value}
@@ -303,21 +272,15 @@ export default function NewIngredientPage() {
                     >
                       {f.label}
                     </Button>
-                  )
+                  );
                 })}
               </div>
             </div>
 
             {/* Par level */}
             <div className="space-y-2">
-              <label
-                htmlFor="par_level"
-                className="text-sm font-medium leading-none"
-              >
-                Par level{" "}
-                <span className="font-normal text-muted-foreground">
-                  (optional)
-                </span>
+              <label htmlFor="par_level" className="text-sm font-medium leading-none">
+                Par level <span className="text-muted-foreground font-normal">(optional)</span>
               </label>
               <Input
                 id="par_level"
@@ -337,7 +300,7 @@ export default function NewIngredientPage() {
               <div className="space-y-2 rounded-md border border-amber-300 bg-amber-50 p-3 dark:border-amber-800 dark:bg-amber-950/40">
                 <p className="text-sm font-medium">Which language is this?</p>
                 {langChoices ? (
-                  <p className="text-sm text-muted-foreground">{langChoices}</p>
+                  <p className="text-muted-foreground text-sm">{langChoices}</p>
                 ) : null}
                 <div className="flex flex-wrap gap-2 pt-1">
                   {LANGUAGES.map((l) => (
@@ -377,26 +340,19 @@ export default function NewIngredientPage() {
         <CardHeader>
           <CardTitle className="text-base">Preview</CardTitle>
           <CardDescription>
-            {created
-              ? "Saved. Add another above to keep going."
-              : "Updates as you type."}
+            {created ? "Saved. Add another above to keep going." : "Updates as you type."}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-2 text-sm">
           {created ? (
             <>
               <div className="flex flex-wrap items-center gap-2">
-                <span className="font-medium">
-                  Will be saved as: {created.canonical_name_en}
-                </span>
-                {created.needs_review ? (
-                  <Badge variant="warning">Needs review</Badge>
-                ) : null}
+                <span className="font-medium">Will be saved as: {created.canonical_name_en}</span>
+                {created.needs_review ? <Badge variant="warning">Needs review</Badge> : null}
               </div>
               {created.aliases.length > 0 ? (
                 <p className="text-muted-foreground">
-                  also findable as:{" "}
-                  {created.aliases.map((a) => a.alias).join(", ")}
+                  also findable as: {created.aliases.map((a) => a.alias).join(", ")}
                 </p>
               ) : (
                 <p className="text-muted-foreground">No aliases recorded.</p>
@@ -404,20 +360,14 @@ export default function NewIngredientPage() {
             </>
           ) : displayName.trim() ? (
             <>
-              <p className="font-medium">
-                Will be saved as: {displayName.trim()}
-              </p>
-              <p className="text-muted-foreground">
-                language: {langLabel(sourceLang)}
-              </p>
+              <p className="font-medium">Will be saved as: {displayName.trim()}</p>
+              <p className="text-muted-foreground">language: {langLabel(sourceLang)}</p>
             </>
           ) : (
-            <p className="text-muted-foreground">
-              Start typing a name to see the preview.
-            </p>
+            <p className="text-muted-foreground">Start typing a name to see the preview.</p>
           )}
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }
