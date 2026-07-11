@@ -59,7 +59,7 @@ export function CommandPalette() {
 
   const select = (hit: SearchHit) => {
     setOpen(false);
-    router.push(`/dashboard/ingredients?highlight=${hit.id}`);
+    router.push(`/dashboard/ingredients/${hit.id}`);
   };
 
   return (

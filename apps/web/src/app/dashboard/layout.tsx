@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { CommandPalette } from "@/components/command-palette";
+import { LogPriceDialog } from "@/components/log-price-dialog";
+import { Button } from "@/components/ui/button";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -16,6 +18,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <Link href="/dashboard/stores" className="hover:text-foreground">
               Stores
             </Link>
+            <Link href="/dashboard/prices/bulk" className="hover:text-foreground">
+              Bulk
+            </Link>
+            <LogPriceDialog
+              trigger={
+                <Button size="sm" variant="outline">
+                  Log a price
+                </Button>
+              }
+            />
             <kbd className="bg-muted hidden items-center gap-1 rounded border px-1.5 py-0.5 font-mono text-[10px] sm:inline-flex">
               ⌘K
             </kbd>

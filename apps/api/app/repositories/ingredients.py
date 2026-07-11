@@ -33,6 +33,17 @@ class IngredientRepository(OrgScopedRepository[Ingredient]):
         result = await self.session.execute(stmt)
         return list(result.scalars().all())
 
+    async def map_categories(self, ids: list[uuid.UUID]) -> dict[uuid.UUID, str]:
+        if not ids:
+            return {}
+        stmt = (
+            select(Ingredient.id, Ingredient.category)
+            .where(Ingredient.org_id == self.org_id)
+            .where(Ingredient.id.in_(ids))
+        )
+        rows = await self.session.execute(stmt)
+        return {row.id: row.category for row in rows}
+
     async def get_alias(self, alias_id: uuid.UUID) -> IngredientAlias | None:
         stmt = select(IngredientAlias).where(
             IngredientAlias.org_id == self.org_id, IngredientAlias.id == alias_id
