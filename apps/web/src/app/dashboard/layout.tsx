@@ -18,6 +18,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <Link href="/dashboard/stores" className="hover:text-foreground">
               Stores
             </Link>
+            <Link href="/dashboard/compare" className="hover:text-foreground">
+              Compare
+            </Link>
             <Link href="/dashboard/prices/bulk" className="hover:text-foreground">
               Bulk
             </Link>
