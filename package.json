@@ -1,0 +1,20 @@
+{
+  "name": "rasoi-radar",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Rasoi Radar — restaurant bulk-ingredient price intelligence (monorepo root)",
+  "packageManager": "pnpm@10.33.0",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev:web": "pnpm --filter @rasoi/web dev",
+    "build": "pnpm --filter @rasoi/web build && pnpm --filter @rasoi/shared build",
+    "lint": "pnpm --filter @rasoi/web lint",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm --filter @rasoi/web test"
+  },
+  "devDependencies": {
+    "prettier": "^3.4.2"
+  }
+}
