@@ -1,27 +1,118 @@
-"""Database seed entrypoint (`make seed`).
+"""Database seed (`make seed`).
 
-PR-0 scaffold: this is a no-op placeholder that verifies connectivity. The real
-seed — the single "Hari Om" org (dogfood mode), 29 ingredients, and 6 starter
-stores — lands in PR-2 alongside the domain model.
+Idempotent: bootstraps the single "Hari Om" dogfood org, an owner user, the 29
+starter ingredients, and the 6 starter stores. Safe to run repeatedly — rows are
+matched on natural keys (org name, user email, ingredient canonical name, store
+name) and only inserted when missing.
+
+Lives under ``scripts/`` (outside ``app/``) so its direct ``select(...)`` usage is
+exempt from the repository-layer org-scoping lint test. ``run_seed`` takes a
+session so it can run against the test database.
 """
 
 from __future__ import annotations
 
 import asyncio
 
-from sqlalchemy import text
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from app import seed_data
 from app.core.logging import configure_logging, get_logger
 from app.db.session import async_session_factory, engine
+from app.models.enums import Role
+from app.models.ingredient import Ingredient
+from app.models.org import Org
+from app.models.store import Store
+from app.models.user import User
+
+
+async def run_seed(session: AsyncSession) -> dict[str, int]:
+    """Insert any missing seed rows. Flushes but does not commit."""
+    created = {"org": 0, "user": 0, "ingredients": 0, "stores": 0}
+
+    org = (
+        await session.execute(select(Org).where(Org.name == seed_data.ORG_NAME))
+    ).scalar_one_or_none()
+    if org is None:
+        org = Org(name=seed_data.ORG_NAME)
+        session.add(org)
+        await session.flush()
+        created["org"] += 1
+
+    user = (
+        await session.execute(select(User).where(User.email == seed_data.SEED_USER_EMAIL))
+    ).scalar_one_or_none()
+    if user is None:
+        user = User(
+            org_id=org.id,
+            email=seed_data.SEED_USER_EMAIL,
+            display_name=seed_data.SEED_USER_NAME,
+            role=Role.OWNER,
+            locale="en",
+        )
+        session.add(user)
+        await session.flush()
+        created["user"] += 1
+
+    existing_names = set(
+        (
+            await session.execute(
+                select(Ingredient.canonical_name_en).where(Ingredient.org_id == org.id)
+            )
+        )
+        .scalars()
+        .all()
+    )
+    for canonical, display, category, unit, freq in seed_data.INGREDIENTS:
+        if canonical in existing_names:
+            continue
+        session.add(
+            Ingredient(
+                org_id=org.id,
+                canonical_name_en=canonical,
+                display_name=display,
+                source_lang="en",
+                category=category,
+                default_unit=unit,
+                purchase_frequency=freq,
+                created_by=user.id,
+            )
+        )
+        created["ingredients"] += 1
+
+    existing_stores = set(
+        (await session.execute(select(Store.name).where(Store.org_id == org.id))).scalars().all()
+    )
+    for name, kind, website, address, city, state, postal in seed_data.STORES:
+        if name in existing_stores:
+            continue
+        session.add(
+            Store(
+                org_id=org.id,
+                name=name,
+                kind=kind,
+                website=website,
+                address_line=address,
+                city=city,
+                state=state,
+                postal=postal,
+            )
+        )
+        created["stores"] += 1
+
+    await session.flush()
+    return created
 
 
 async def seed() -> None:
     configure_logging()
     logger = get_logger("seed")
     async with async_session_factory() as session:
-        await session.execute(text("SELECT 1"))
+        created = await run_seed(session)
+        await session.commit()
     await engine.dispose()
-    logger.info("seed_complete", note="PR-0 placeholder — domain seed lands in PR-2")
+    logger.info("seed_complete", **created)
 
 
 if __name__ == "__main__":

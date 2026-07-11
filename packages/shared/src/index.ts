@@ -8,6 +8,8 @@ import { z } from "zod";
  * Pydantic for the API. Keep all three in sync.
  */
 
+export * from "./units";
+
 export const APP_NAME = "Rasoi Radar" as const;
 export const API_VERSION = "api/v1" as const;
 
