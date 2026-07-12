@@ -73,6 +73,24 @@ async def db_session(db_engine) -> AsyncGenerator[AsyncSession, None]:
         yield session
 
 
+@pytest.fixture(autouse=True)
+def _dogfood_context():
+    """Pin the tenancy flag OFF for tests by default.
+
+    The app ships MULTI_TENANT=true, but most suites exercise business logic
+    under the single-org dogfood fallback. Auth/leak suites opt back into
+    multi-tenant (the ``multi_tenant`` fixture, or a ``get_context`` override).
+    Autouse runs before the explicitly-requested ``multi_tenant`` fixture, so
+    those tests still end up with the flag on.
+    """
+    from app.core.config import settings
+
+    prev = settings.multi_tenant
+    settings.multi_tenant = False
+    yield
+    settings.multi_tenant = prev
+
+
 @pytest.fixture()
 def app(db_engine):
     """The FastAPI app with its DB session bound to the test engine.
