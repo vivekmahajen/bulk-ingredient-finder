@@ -17,6 +17,7 @@ from __future__ import annotations
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.logging import get_logger
 from app.deps import RequestContext
 from app.models.enums import AliasKind
 from app.models.ingredient import FORECAST_MONTHS, Ingredient, IngredientAlias, IngredientForecast
@@ -24,6 +25,8 @@ from app.schemas.ingredient import IngredientCreate
 from app.services import audit
 from app.services.translation import TranslationService, to_english_cached
 from app.synonyms import find_group
+
+logger = get_logger("ingredients")
 
 CONFIDENCE_THRESHOLD = 0.7
 
@@ -119,6 +122,9 @@ async def add_ingredient(
             add_alias(term.alias, term.lang, AliasKind.SYNONYM)
 
     # 5. Optional demand forecast + sourcing (monthly amounts, serving, vendor).
+    #    Enrichment must never take down the core write: persist it in its own
+    #    savepoint so a failure (e.g. an un-migrated table) still yields the
+    #    ingredient rather than failing the whole row.
     if payload.forecast is not None:
         f = payload.forecast
         forecast = IngredientForecast(
@@ -131,7 +137,12 @@ async def add_ingredient(
         )
         for month in FORECAST_MONTHS:
             setattr(forecast, month, getattr(f, month))
-        session.add(forecast)
+        try:
+            async with session.begin_nested():
+                session.add(forecast)
+                await session.flush()
+        except Exception as exc:  # noqa: BLE001 — forecast is optional enrichment
+            logger.warning("forecast_save_failed", ingredient=display_name, error=str(exc))
 
     audit.record(
         session,
