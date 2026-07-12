@@ -134,61 +134,74 @@ export function SellersNearby({ ingredientId, ingredientName }: SellersNearbyPro
     return `${i}:${s.name}`;
   }
 
-  /** Add a discovered seller as a store, plus its price when one was found. */
-  async function saveDiscovered(s: DiscoveredSeller, key: string) {
+  function hasConcretePrice(s: DiscoveredSeller): boolean {
+    return (
+      s.price_cents != null &&
+      s.price_cents > 0 &&
+      s.pack_qty != null &&
+      s.pack_qty > 0 &&
+      s.pack_unit != null &&
+      (PACK_UNITS as readonly string[]).includes(s.pack_unit)
+    );
+  }
+
+  /** Create a store record from a discovered seller. Returns it, or null on error. */
+  async function createStore(s: DiscoveredSeller): Promise<Store | null> {
+    const res = await apiPost<Store>("/api/v1/stores", {
+      name: s.name,
+      kind: s.url ? "online" : "cash_and_carry",
+      website: s.url ?? undefined,
+      notes: s.location ?? undefined,
+    });
+    if (!res.ok) {
+      toast({ title: res.problem.title, description: res.problem.detail, variant: "destructive" });
+      return null;
+    }
+    return res.data;
+  }
+
+  /** Add the seller to the system (store only), no price. */
+  async function addSellerOnly(s: DiscoveredSeller, key: string) {
     setSavingKey(key);
     try {
-      const storeRes = await apiPost<Store>("/api/v1/stores", {
-        name: s.name,
-        kind: s.url ? "online" : "cash_and_carry",
-        website: s.url ?? undefined,
-        notes: s.location ?? undefined,
-      });
-      if (!storeRes.ok) {
-        toast({
-          title: storeRes.problem.title,
-          description: storeRes.problem.detail,
-          variant: "destructive",
-        });
-        return;
-      }
-      const store = storeRes.data;
-
-      const unit = s.pack_unit;
-      const canPrice =
-        s.price_cents != null &&
-        s.price_cents > 0 &&
-        s.pack_qty != null &&
-        s.pack_qty > 0 &&
-        unit != null &&
-        (PACK_UNITS as readonly string[]).includes(unit);
-
-      if (canPrice) {
-        const body: PriceCreate = {
-          ingredient_id: ingredientId,
-          store_id: store.id,
-          pack_desc: s.pack_desc ?? `${s.pack_qty} ${unit}`,
-          pack_qty: s.pack_qty as number,
-          pack_unit: unit as PackUnit,
-          price_cents: s.price_cents as number,
-          source: "website",
-        };
-        const priceRes = await apiPost<unknown>("/api/v1/prices", body);
-        if (!priceRes.ok) {
-          toast({
-            title: "Seller added, price not saved",
-            description: priceRes.problem.detail,
-            variant: "destructive",
-          });
-        } else {
-          toast({ title: "Saved", description: `${s.name} and its price were added.` });
-          load();
-        }
-      } else {
+      const store = await createStore(s);
+      if (store) {
+        setPreselectStoreId(store.id);
         toast({
           title: "Seller added",
-          description: `${s.name} added. No concrete price found — log one to compare it.`,
+          description: `${s.name} added to your stores. Log a bulk price to compare it.`,
         });
+      }
+    } finally {
+      setSavingKey(null);
+    }
+  }
+
+  /** Add the seller and log its web price so it flows into Compare. */
+  async function saveSellerAndPrice(s: DiscoveredSeller, key: string) {
+    setSavingKey(key);
+    try {
+      const store = await createStore(s);
+      if (!store) return;
+      const body: PriceCreate = {
+        ingredient_id: ingredientId,
+        store_id: store.id,
+        pack_desc: s.pack_desc ?? `${s.pack_qty} ${s.pack_unit}`,
+        pack_qty: s.pack_qty as number,
+        pack_unit: s.pack_unit as PackUnit,
+        price_cents: s.price_cents as number,
+        source: "website",
+      };
+      const priceRes = await apiPost<unknown>("/api/v1/prices", body);
+      if (!priceRes.ok) {
+        toast({
+          title: "Seller added, price not saved",
+          description: priceRes.problem.detail,
+          variant: "destructive",
+        });
+      } else {
+        toast({ title: "Saved", description: `${s.name} and its price were added.` });
+        load();
       }
     } finally {
       setSavingKey(null);
@@ -448,7 +461,7 @@ export function SellersNearby({ ingredientId, ingredientName }: SellersNearbyPro
                 <ul className="divide-y">
                   {discovered.sellers.map((s, i) => {
                     const key = sellerKey(s, i);
-                    const priced = s.price_cents != null && s.pack_qty != null && s.pack_unit != null;
+                    const priced = hasConcretePrice(s);
                     return (
                       <li key={key} className="flex flex-wrap items-start justify-between gap-2 py-3">
                         <div className="min-w-0 space-y-0.5">
@@ -484,19 +497,27 @@ export function SellersNearby({ ingredientId, ingredientName }: SellersNearbyPro
                             </p>
                           )}
                         </div>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          disabled={savingKey === key}
-                          onClick={() => void saveDiscovered(s, key)}
-                        >
-                          {savingKey === key
-                            ? "Saving…"
-                            : priced
-                              ? "Save price"
-                              : "Add seller"}
-                        </Button>
+                        <div className="flex shrink-0 gap-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            disabled={savingKey === key}
+                            onClick={() => void addSellerOnly(s, key)}
+                          >
+                            {savingKey === key ? "Saving…" : "Add seller"}
+                          </Button>
+                          {priced && (
+                            <Button
+                              type="button"
+                              size="sm"
+                              disabled={savingKey === key}
+                              onClick={() => void saveSellerAndPrice(s, key)}
+                            >
+                              Save price
+                            </Button>
+                          )}
+                        </div>
                       </li>
                     );
                   })}
