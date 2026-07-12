@@ -50,6 +50,8 @@ def confidence(source: str, age_days: int) -> str:
 class _Priced:
     store_id: uuid.UUID
     store_name: str
+    store_kind: str | None
+    brand: str | None
     unit_price: Decimal
     price_cents: int
     pack_desc: str
@@ -116,6 +118,8 @@ async def compare(
             _Priced(
                 store_id=r.store_id,
                 store_name=r.store_name,
+                store_kind=str(r.store_kind) if r.store_kind is not None else None,
+                brand=r.brand,
                 unit_price=Decimal(str(r.unit_price_cents)),
                 price_cents=r.price_cents,
                 pack_desc=r.pack_desc,
@@ -143,6 +147,8 @@ async def compare(
             StoreOption(
                 store_id=p.store_id,
                 store_name=p.store_name,
+                store_kind=p.store_kind,
+                brand=p.brand,
                 unit_price_cents=float(p.unit_price),
                 base_unit=p.base_unit,
                 pack_desc=p.pack_desc,

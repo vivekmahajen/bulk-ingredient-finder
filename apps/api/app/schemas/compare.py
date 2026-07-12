@@ -11,6 +11,8 @@ from pydantic import BaseModel, Field
 class StoreOption(BaseModel):
     store_id: uuid.UUID
     store_name: str
+    store_kind: str | None = None
+    brand: str | None = None
     unit_price_cents: float
     base_unit: str
     pack_desc: str

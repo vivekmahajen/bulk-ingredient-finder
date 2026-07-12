@@ -5,6 +5,8 @@ import { apiGet, apiPost } from "@/lib/api";
 export interface StoreOption {
   store_id: string;
   store_name: string;
+  store_kind: string | null;
+  brand: string | null;
   unit_price_cents: number;
   base_unit: string;
   pack_desc: string;
@@ -74,6 +76,47 @@ export const FREQUENCIES: ReadonlyArray<{ value: string; label: string }> = [
 
 export function dollars(cents: number): string {
   return `$${(cents / 100).toFixed(2)}`;
+}
+
+const KM_PER_MILE = 1.60934;
+
+export function milesToKm(miles: number): number {
+  return miles * KM_PER_MILE;
+}
+
+export function kmToMiles(km: number): number {
+  return km / KM_PER_MILE;
+}
+
+/** Radius presets for a single-ingredient "sellers near me" view, in miles. */
+export const RADIUS_PRESETS_MI: ReadonlyArray<{ miles: number; label: string }> = [
+  { miles: 10, label: "10 mi" },
+  { miles: 25, label: "25 mi" },
+  { miles: 50, label: "50 mi" },
+  { miles: 100, label: "100 mi" },
+];
+
+/**
+ * The pack quantity in the option's base unit (kg / l / each), derived exactly
+ * from price ÷ unit-price. e.g. a $52 pack at $2.60/kg is 20 kg.
+ */
+export function baseQuantity(o: StoreOption): number | null {
+  if (!o.unit_price_cents) return null;
+  return o.price_cents / o.unit_price_cents;
+}
+
+/**
+ * Whether an option represents a genuinely bulk pack. There is no explicit
+ * "bulk" flag on a price, so we treat it as a threshold on the pack size in the
+ * comparable base unit: ≥ 5 kg, ≥ 4 L, or ≥ 6 units.
+ */
+const BULK_THRESHOLDS: Record<string, number> = { kg: 5, l: 4, each: 6 };
+
+export function isBulk(o: StoreOption): boolean {
+  const qty = baseQuantity(o);
+  if (qty === null) return false;
+  const threshold = BULK_THRESHOLDS[o.base_unit] ?? 0;
+  return qty >= threshold;
 }
 
 interface CompareParams {
