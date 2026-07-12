@@ -18,6 +18,9 @@ dependencies = [
     "pyjwt>=2.10.0",
     "email-validator>=2.2.0",
     "httpx>=0.28.0",
+    "pillow>=11.0.0",
+    "pypdfium2>=4.30.0",
+    "boto3>=1.35.0",
 ]
 
 [project.optional-dependencies]
@@ -54,3 +57,8 @@ ignore = ["B008"]
 python_version = "3.11"
 plugins = ["pydantic.mypy"]
 strict = true
+
+[[tool.mypy.overrides]]
+# Third-party image/storage libs ship no type stubs.
+module = ["boto3", "pypdfium2", "pillow_heif"]
+ignore_missing_imports = true

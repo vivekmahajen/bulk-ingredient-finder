@@ -81,6 +81,23 @@ class PriceSource(StrEnum):
     MANUAL = "manual"
 
 
+class InvoiceStatus(StrEnum):
+    UPLOADED = "uploaded"
+    EXTRACTING = "extracting"
+    NEEDS_REVIEW = "needs_review"
+    COMMITTED = "committed"
+    FAILED = "failed"
+    REJECTED = "rejected"
+
+
+class LineMatchStatus(StrEnum):
+    AUTO_MATCHED = "auto_matched"
+    SUGGESTED = "suggested"
+    UNMATCHED = "unmatched"
+    MANUAL = "manual"
+    EXCLUDED = "excluded"
+
+
 class AuthTokenKind(StrEnum):
     REFRESH = "refresh"
     MAGIC = "magic"

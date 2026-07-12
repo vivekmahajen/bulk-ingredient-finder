@@ -28,6 +28,8 @@ _ASYNCPG_ADMIN = "postgresql://postgres:postgres@localhost:5432/postgres"
 _DB_NAME = TEST_DATABASE_URL.rsplit("/", 1)[-1]
 
 DOMAIN_TABLES = [
+    "invoice_lines",
+    "invoices",
     "price_entries",
     "ingredient_aliases",
     "ingredients",

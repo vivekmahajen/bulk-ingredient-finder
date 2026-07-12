@@ -53,6 +53,27 @@ class Settings(BaseSettings):
     # tolerates a long round-trip, so give the upstream call generous headroom.
     discovery_timeout_s: float = 90.0
 
+    # Invoice capture (PR-9). Extraction uses ANTHROPIC_API_KEY above; set
+    # EXTRACT_PROVIDER=null to run the whole pipeline off fixtures (tests/CI).
+    extract_provider: str = "claude"
+    extraction_model: str = "claude-sonnet-4-6"
+    extraction_timeout_s: float = 60.0
+    extraction_retries: int = 2
+    extractions_per_day: int = 25
+
+    # Object storage for invoice images.
+    storage_provider: str = "local"  # "local" | "s3"
+    storage_local_dir: str = "var/uploads"
+    s3_endpoint: str = ""
+    s3_bucket: str = ""
+    s3_region: str = "auto"
+    s3_access_key_id: str = ""
+    s3_secret_access_key: str = ""
+
+    # Upload hardening bounds.
+    max_upload_mb: int = 15
+    max_pages: int = 6
+
     # CORS — comma-separated extra origins in addition to localhost defaults.
     cors_origins: str = "http://localhost:3000"
 

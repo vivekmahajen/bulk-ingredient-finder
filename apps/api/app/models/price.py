@@ -84,6 +84,10 @@ class PriceEntry(UUIDPrimaryKeyMixin, OrgScopedMixin, Base):
         pg_enum(PriceSource, "price_source"), nullable=False
     )
     photo_url: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Provenance: set when this entry was committed from an invoice line (PR-9).
+    invoice_line_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("invoice_lines.id", ondelete="SET NULL"), nullable=True
+    )
     entered_by: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )

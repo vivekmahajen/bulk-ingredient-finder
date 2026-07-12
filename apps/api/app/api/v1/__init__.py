@@ -12,6 +12,7 @@ from app.api.v1 import (
     auth,
     compare,
     ingredients,
+    invoices,
     me,
     org,
     prices,
@@ -29,6 +30,7 @@ async def ping() -> dict[str, str]:
 
 
 api_router.include_router(ingredients.router)
+api_router.include_router(invoices.router)
 api_router.include_router(stores.router)
 api_router.include_router(search.router)
 api_router.include_router(org.router)

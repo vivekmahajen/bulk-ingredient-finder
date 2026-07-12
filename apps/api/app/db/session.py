@@ -31,3 +31,12 @@ async def get_session() -> AsyncGenerator[AsyncSession, None]:
     """FastAPI dependency yielding a request-scoped async session."""
     async with async_session_factory() as session:
         yield session
+
+
+def get_session_factory() -> async_sessionmaker[AsyncSession]:
+    """Dependency returning the session factory for background work.
+
+    Background tasks outlive the request session, so they open their own session
+    from this factory. Tests override it to bind to the test engine.
+    """
+    return async_session_factory

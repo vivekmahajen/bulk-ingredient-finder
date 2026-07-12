@@ -7,12 +7,15 @@ from app.models.enums import (
     AuthTokenKind,
     Category,
     DefaultUnit,
+    InvoiceStatus,
+    LineMatchStatus,
     PriceSource,
     PurchaseFrequency,
     Role,
     StoreKind,
 )
 from app.models.ingredient import Ingredient, IngredientAlias, IngredientForecast
+from app.models.invoice import Invoice, InvoiceLine
 from app.models.org import Org
 from app.models.price import PriceEntry
 from app.models.store import Store
@@ -29,6 +32,10 @@ __all__ = [
     "Ingredient",
     "IngredientAlias",
     "IngredientForecast",
+    "Invoice",
+    "InvoiceLine",
+    "InvoiceStatus",
+    "LineMatchStatus",
     "Org",
     "PriceEntry",
     "PriceSource",

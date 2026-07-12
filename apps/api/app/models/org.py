@@ -7,7 +7,7 @@ math) are added in PR-5.
 
 from __future__ import annotations
 
-from sqlalchemy import Numeric, Text
+from sqlalchemy import Boolean, Numeric, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
@@ -20,3 +20,8 @@ class Org(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     # The restaurant's own location, for store-distance math (PR-5+).
     home_lat: Mapped[float | None] = mapped_column(Numeric, nullable=True)
     home_lng: Mapped[float | None] = mapped_column(Numeric, nullable=True)
+    # When true (and multi-tenant), committed prices are flagged shareable into
+    # the regional price graph (the graph itself is PR-10; only the flag ships now).
+    contribute_prices: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false"
+    )
