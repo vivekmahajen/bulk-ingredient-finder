@@ -14,6 +14,7 @@ are best-effort estimates and are always labeled as such.
 from __future__ import annotations
 
 import json
+import os
 from dataclasses import dataclass, field
 from decimal import Decimal, InvalidOperation
 from typing import Protocol
@@ -27,7 +28,7 @@ from app.units import PackUnit, base_unit_of, unit_price_cents_per_base
 
 logger = get_logger("price_discovery")
 
-_ANTHROPIC_URL = "https://api.anthropic.com/v1/messages"
+_ANTHROPIC_BASE = os.environ.get("ANTHROPIC_BASE_URL", "https://api.anthropic.com")
 _ANTHROPIC_VERSION = "2023-06-01"
 _MAX_SELLERS = 8
 
@@ -81,36 +82,67 @@ def _prompt(q: DiscoveryQuery) -> str:
 class ClaudeWebSearchProvider:
     name = "claude"
 
-    def __init__(self, api_key: str, *, model: str, timeout_s: float) -> None:
+    # Server-side web search can return stop_reason="pause_turn" partway through a
+    # long turn; you resume by sending the assistant's content back. Cap the
+    # number of resumes so a runaway turn can't loop forever.
+    _MAX_ROUNDS = 5
+
+    def __init__(
+        self, api_key: str, *, model: str, timeout_s: float, base_url: str | None = None
+    ) -> None:
         self._api_key = api_key
         self._model = model
         self._timeout_s = timeout_s
+        base = (base_url or _ANTHROPIC_BASE).rstrip("/")
+        self._url = f"{base}/v1/messages"
 
     async def discover(self, q: DiscoveryQuery) -> tuple[list[dict[str, object]], list[str]]:
-        body = {
-            "model": self._model,
-            "max_tokens": 2500,
-            "tools": [{"type": "web_search_20250305", "name": "web_search", "max_uses": 5}],
-            "messages": [{"role": "user", "content": _prompt(q)}],
-        }
         headers = {
             "x-api-key": self._api_key,
             "anthropic-version": _ANTHROPIC_VERSION,
             "content-type": "application/json",
         }
-        async with httpx.AsyncClient(timeout=self._timeout_s) as client:
-            resp = await client.post(_ANTHROPIC_URL, headers=headers, json=body)
-            resp.raise_for_status()
-            data = resp.json()
+        messages: list[dict[str, object]] = [{"role": "user", "content": _prompt(q)}]
+        texts: list[str] = []
+        last_round_text = ""
+        stop_reason: str | None = None
 
-        text = "".join(
-            block.get("text", "")
-            for block in data.get("content", [])
-            if block.get("type") == "text"
-        ).strip()
-        parsed = _extract_json(text)
+        async with httpx.AsyncClient(timeout=self._timeout_s) as client:
+            for _ in range(self._MAX_ROUNDS):
+                body = {
+                    "model": self._model,
+                    "max_tokens": 4096,
+                    "tools": [
+                        {"type": "web_search_20250305", "name": "web_search", "max_uses": 5}
+                    ],
+                    "messages": messages,
+                }
+                resp = await client.post(self._url, headers=headers, json=body)
+                resp.raise_for_status()
+                data = resp.json()
+                content = data.get("content", []) or []
+                round_text = "".join(
+                    b.get("text", "") for b in content if b.get("type") == "text"
+                )
+                if round_text:
+                    texts.append(round_text)
+                    last_round_text = round_text
+                stop_reason = data.get("stop_reason")
+                if stop_reason == "pause_turn":
+                    # Resume the paused turn by echoing the assistant content back.
+                    messages.append({"role": "assistant", "content": content})
+                    continue
+                break
+
+        # The final JSON is in the last round; fall back to the concatenation.
+        parsed = _extract_json(last_round_text.strip()) or _extract_json("".join(texts).strip())
         if parsed is None:
-            raise DiscoveryUnavailable("model did not return parseable JSON")
+            logger.warning(
+                "discovery_unparseable",
+                stop_reason=stop_reason,
+                text_chars=len(last_round_text),
+            )
+            raise DiscoveryUnavailable(f"unparseable model reply (stop={stop_reason})")
         sellers_obj = parsed.get("sellers")
         notes_obj = parsed.get("notes")
         sellers = sellers_obj if isinstance(sellers_obj, list) else []
@@ -155,10 +187,20 @@ class PriceDiscoveryService:
             raw, notes = await self._provider.discover(q)
         except DiscoveryUnavailable as exc:
             logger.warning("discovery_no_results", error=str(exc))
-            return [], ["The web search didn't return usable results. Try again shortly."]
+            return [], [f"The web search didn't return usable results ({exc}). Try again shortly."]
+        except httpx.HTTPStatusError as exc:
+            detail = f"{exc.response.status_code}"
+            try:
+                err = exc.response.json().get("error", {})
+                code = exc.response.status_code
+                detail = f"{code} {err.get('type', '')}: {err.get('message', '')}"
+            except Exception:  # noqa: BLE001 — best-effort error surfacing
+                pass
+            logger.warning("discovery_http_error", detail=detail)
+            return [], [f"Web price discovery call failed ({detail})."]
         except Exception as exc:  # noqa: BLE001 — degrade, never break the request
-            logger.warning("discovery_failed", error=str(exc))
-            return [], ["Web price discovery is temporarily unavailable."]
+            logger.warning("discovery_failed", error=f"{type(exc).__name__}: {exc}")
+            return [], [f"Web price discovery is temporarily unavailable ({type(exc).__name__})."]
 
         sellers = [s for s in (_to_seller(item) for item in raw[:_MAX_SELLERS]) if s is not None]
         # Cheapest first when we could normalize a unit price; unpriced sink last.
@@ -240,5 +282,6 @@ def get_discovery_service() -> PriceDiscoveryService | None:
             settings.anthropic_api_key,
             model=settings.discovery_model,
             timeout_s=settings.discovery_timeout_s,
+            base_url=_ANTHROPIC_BASE,
         )
     )

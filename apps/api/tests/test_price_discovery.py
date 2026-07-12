@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+import httpx
 import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.org import Org
+from app.services import price_discovery
 from app.services.price_discovery import (
+    ClaudeWebSearchProvider,
     DiscoveryQuery,
     DiscoveryUnavailable,
     PriceDiscoveryService,
@@ -97,6 +100,74 @@ async def test_service_sorts_cheapest_first_priced_before_unpriced() -> None:
     sellers, notes = await service.discover(DiscoveryQuery(ingredient_name="Cauliflower"))
     assert [s.name for s in sellers] == ["Cheap", "Pricey", "No price"]
     assert notes == ["membership required"]
+
+
+def _mock_anthropic(monkeypatch: pytest.MonkeyPatch, responses: list[dict]) -> list[int]:
+    """Patch httpx.AsyncClient so the provider talks to a canned transport.
+
+    Returns a one-element list holding the request count.
+    """
+    queue = iter(responses)
+    calls = [0]
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        calls[0] += 1
+        return httpx.Response(200, json=next(queue))
+
+    transport = httpx.MockTransport(handler)
+    real = httpx.AsyncClient
+
+    def factory(*args, **kwargs):  # type: ignore[no-untyped-def]
+        return real(transport=transport)
+
+    monkeypatch.setattr(price_discovery.httpx, "AsyncClient", factory)
+    return calls
+
+
+@pytest.mark.asyncio
+async def test_provider_resumes_on_pause_turn(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls = _mock_anthropic(
+        monkeypatch,
+        [
+            # Round 1: server paused mid-search, no JSON yet.
+            {
+                "stop_reason": "pause_turn",
+                "content": [
+                    {"type": "text", "text": "Let me search for suppliers…"},
+                    {"type": "server_tool_use", "name": "web_search"},
+                ],
+            },
+            # Round 2: final answer with the JSON payload.
+            {
+                "stop_reason": "end_turn",
+                "content": [
+                    {
+                        "type": "text",
+                        "text": '{"sellers":[{"name":"Restaurant Depot","price_cents":4000,'
+                        '"pack_qty":40,"pack_unit":"lb"}],"notes":["membership required"]}',
+                    }
+                ],
+            },
+        ],
+    )
+    provider = ClaudeWebSearchProvider("k", model="m", timeout_s=5)
+    sellers, notes = await provider.discover(DiscoveryQuery(ingredient_name="Cauliflower"))
+    assert calls[0] == 2  # resumed the paused turn
+    assert sellers[0]["name"] == "Restaurant Depot"
+    assert notes == ["membership required"]
+
+
+@pytest.mark.asyncio
+async def test_provider_raises_with_stop_reason_when_no_json(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _mock_anthropic(
+        monkeypatch,
+        [{"stop_reason": "end_turn", "content": [{"type": "text", "text": "sorry, no data"}]}],
+    )
+    provider = ClaudeWebSearchProvider("k", model="m", timeout_s=5)
+    with pytest.raises(DiscoveryUnavailable, match="stop=end_turn"):
+        await provider.discover(DiscoveryQuery(ingredient_name="Cauliflower"))
 
 
 @pytest.mark.asyncio
