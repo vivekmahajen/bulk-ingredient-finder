@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter
 
-from app.api.v1 import ingredients, org, prices, search, stores
+from app.api.v1 import compare, ingredients, org, prices, search, stores
 
 api_router = APIRouter()
 
@@ -23,3 +23,4 @@ api_router.include_router(stores.router)
 api_router.include_router(search.router)
 api_router.include_router(org.router)
 api_router.include_router(prices.router)
+api_router.include_router(compare.router)

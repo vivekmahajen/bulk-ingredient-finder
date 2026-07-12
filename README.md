@@ -78,6 +78,8 @@ Prerequisites: **Node ≥ 20 + pnpm 10**, **Python 3.12**, **PostgreSQL 16**.
 | `POST /api/v1/prices/bulk`    | Bulk log ≤200 (207 per-row results) — PR-6      |
 | `GET /api/v1/prices`          | List prices (paginated, filterable) — PR-6      |
 | `GET /api/v1/ingredients/{id}/price-history` | Per-store time series — PR-6     |
+| `GET`/`POST /api/v1/compare`  | Cheapest-by-radius; POST adds quantities — PR-7  |
+| `GET /api/v1/compare/frequency-run` | This week's shopping run — PR-7            |
 | `GET /docs`                   | Swagger UI                                        |
 
 Errors are returned as RFC-7807 `application/problem+json`. Logs are structured
