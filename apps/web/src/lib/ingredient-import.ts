@@ -107,6 +107,8 @@ interface HeaderCols {
   cadence: number;
   purchase: number;
   serving: number;
+  vendor: number;
+  website: number;
 }
 
 function findCol(headers: string[], ...needles: string[]): number {
@@ -135,9 +137,14 @@ function parseHeaderRow(line: string, delim: "\t" | ",", cols: HeaderCols): Prev
   const default_unit = inferUnit(purchaseAs);
   const purchase_frequency = normalizeFrequency(at(cols.cadence));
 
+  const vendor = at(cols.vendor);
+  const website = at(cols.website);
+
   const noteParts: string[] = [];
   if (purchaseAs) noteParts.push(`Purchase as: ${purchaseAs}`);
   if (serving) noteParts.push(`~${serving} g/ml per serving`);
+  if (vendor) noteParts.push(`Vendor: ${vendor}`);
+  if (website) noteParts.push(`Website: ${website}`);
 
   const parsed: IngredientCreate = { display_name: name, category, default_unit, purchase_frequency };
   if (noteParts.length > 0) parsed.notes = noteParts.join(" · ");
@@ -204,6 +211,8 @@ export function parseIngredientTable(text: string): ParseResult {
       cadence: findCol(firstCells, "order cadence", "cadence", "frequency"),
       purchase: findCol(firstCells, "purchase as", "purchase", "pack"),
       serving: findCol(firstCells, "per serving", "serving"),
+      vendor: findCol(firstCells, "recommended vendor", "vendor", "supplier"),
+      website: findCol(firstCells, "website", "url", "site"),
     };
     return {
       headerMapped: true,
