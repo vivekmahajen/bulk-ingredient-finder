@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import uuid
 
-from fastapi import APIRouter, Depends, Request, status
+from fastapi import APIRouter, Depends, Request, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import ProblemException
@@ -20,6 +20,9 @@ from app.models.ingredient import IngredientAlias
 from app.repositories.ingredients import IngredientRepository
 from app.schemas.ingredient import (
     AliasCreate,
+    BulkIngredientCreate,
+    BulkIngredientResult,
+    BulkIngredientRowResult,
     IngredientAliasRead,
     IngredientCreate,
     IngredientRead,
@@ -70,6 +73,58 @@ async def create_ingredient(
     full = await IngredientRepository(session, ctx.org_id).get_with_aliases(ingredient.id)
     assert full is not None
     return IngredientRead.model_validate(full)
+
+
+@router.post(
+    "/bulk",
+    response_model=BulkIngredientResult,
+    status_code=status.HTTP_207_MULTI_STATUS,
+    summary="Bulk-add ingredients (≤100, per-row results)",
+)
+@limiter.limit("10/minute")
+async def create_ingredients_bulk(
+    request: Request,
+    payload: BulkIngredientCreate,
+    response: Response,
+    ctx: RequestContext = Depends(get_context),
+    session: AsyncSession = Depends(get_session),
+    translation: TranslationService = Depends(get_translation_service),
+) -> BulkIngredientResult:
+    results: list[BulkIngredientRowResult] = []
+    created = 0
+
+    for i, item in enumerate(payload.items):
+        try:
+            # Each row runs in its own savepoint so one bad row can't poison the batch.
+            async with session.begin_nested():
+                ingredient = await add_ingredient(session, ctx, item, translation)
+            results.append(
+                BulkIngredientRowResult(
+                    index=i,
+                    ok=True,
+                    id=ingredient.id,
+                    canonical_name_en=ingredient.canonical_name_en,
+                    needs_review=ingredient.needs_review,
+                )
+            )
+            created += 1
+        except LanguageAmbiguous:
+            results.append(
+                BulkIngredientRowResult(
+                    index=i,
+                    ok=False,
+                    error="Ambiguous language — set a language for this row.",
+                )
+            )
+        except Exception as exc:  # noqa: BLE001 — isolate one bad row from the batch
+            results.append(BulkIngredientRowResult(index=i, ok=False, error=str(exc)))
+
+    await session.commit()
+    if created == len(payload.items):
+        response.status_code = status.HTTP_201_CREATED
+    return BulkIngredientResult(
+        created=created, failed=len(payload.items) - created, results=results
+    )
 
 
 @router.post(

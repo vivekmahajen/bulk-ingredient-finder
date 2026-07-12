@@ -31,6 +31,29 @@ class IngredientCreate(BaseModel):
     notes: str | None = None
 
 
+class BulkIngredientCreate(BaseModel):
+    """Payload for POST /ingredients/bulk — up to 100 ingredients at once."""
+
+    items: list[IngredientCreate] = Field(min_length=1, max_length=100)
+
+
+class BulkIngredientRowResult(BaseModel):
+    """Per-row outcome for a bulk add (207-style: some rows may fail)."""
+
+    index: int
+    ok: bool
+    id: uuid.UUID | None = None
+    canonical_name_en: str | None = None
+    needs_review: bool = False
+    error: str | None = None
+
+
+class BulkIngredientResult(BaseModel):
+    created: int
+    failed: int
+    results: list[BulkIngredientRowResult]
+
+
 class AliasCreate(BaseModel):
     """Payload for POST /ingredients/{id}/aliases (user correction)."""
 
