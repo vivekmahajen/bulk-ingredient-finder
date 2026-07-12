@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from functools import lru_cache
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -45,6 +46,21 @@ class Settings(BaseSettings):
     # request must carry a valid session (no implicit single-org fallback).
     # Set MULTI_TENANT=false to run in single-restaurant "dogfood" mode.
     multi_tenant: bool = True
+
+    @field_validator("database_url")
+    @classmethod
+    def _use_asyncpg_driver(cls, v: str) -> str:
+        """Normalize managed-Postgres URLs to the asyncpg driver.
+
+        Railway/Heroku/Fly inject a libpq-style ``postgres://`` or
+        ``postgresql://`` URL, but the async SQLAlchemy engine needs
+        ``postgresql+asyncpg://``. An explicit ``+driver`` is left untouched.
+        """
+        if v.startswith("postgres://"):
+            return "postgresql+asyncpg://" + v[len("postgres://") :]
+        if v.startswith("postgresql://"):
+            return "postgresql+asyncpg://" + v[len("postgresql://") :]
+        return v
 
     @property
     def is_development(self) -> bool:
