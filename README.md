@@ -66,8 +66,14 @@ Prerequisites: **Node ≥ 20 + pnpm 10**, **Python 3.12**, **PostgreSQL 16**.
 | `GET /api/v1/ingredients/{id}`| Ingredient + aliases — PR-2                       |
 | `POST /api/v1/ingredients/{id}/aliases` | Add a user alias (correction) — PR-3   |
 | `DELETE …/aliases/{alias_id}` | Remove an alias (correction) — PR-3              |
-| `GET /api/v1/stores`          | List active stores (org-scoped) — PR-2           |
-| `GET /api/v1/stores/{id}`     | Store detail — PR-2                               |
+| `GET /api/v1/search/ingredients` | Multilingual search (trigram + translation) — PR-4 |
+| `GET /api/v1/stores`          | List stores; `?near=lat,lng&radius_km=` — PR-2/5 |
+| `POST /api/v1/stores`         | Add store (geocodes the address) — PR-5          |
+| `PATCH /api/v1/stores/{id}`   | Update store (re-geocodes) — PR-5                |
+| `DELETE /api/v1/stores/{id}`  | Soft-delete store — PR-5                          |
+| `GET /api/v1/stores/{id}/prices` | Latest price per ingredient at a store — PR-5 |
+| `GET /api/v1/stores/{id}/wins`| Ingredients this store wins on — PR-5            |
+| `GET`/`PATCH /api/v1/org`     | Read / set org home location (geocoded) — PR-5   |
 | `GET /docs`                   | Swagger UI                                        |
 
 Errors are returned as RFC-7807 `application/problem+json`. Logs are structured
