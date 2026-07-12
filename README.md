@@ -92,6 +92,48 @@ the `NEXT_LOCALE` cookie and mirrors the choice to `users.locale` via
 `PATCH /api/v1/me/locale`, so it persists across devices. The app that celebrates
 multilingual *data* isn't English-only *chrome*.
 
+## Invoice capture (PR-9)
+
+Photograph a supplier invoice in any language — English, हिन्दी (Hindi/Devanagari),
+Español, or a faded thermal receipt — and Claude vision extracts the line items.
+A human then reviews, corrects, and commits, and each committed line becomes a
+price entry that feeds the compare view and the market map. **Extraction proposes,
+humans commit — no price enters the market map unreviewed.**
+
+### Setup / env vars
+
+| Variable | Default | Notes |
+| -------- | ------- | ----- |
+| `EXTRACT_PROVIDER` | `claude` | Set `null` to run the whole pipeline off fixtures with no API calls — this is what CI uses. |
+| `ANTHROPIC_API_KEY` | — | Required for live extraction; shared with web price discovery. |
+| `EXTRACTION_MODEL` | `claude-sonnet-4-6` | Vision model used for extraction. |
+| `EXTRACTIONS_PER_DAY` | `25` | Per-org daily quota → HTTP 429 when exceeded. |
+| `STORAGE_PROVIDER` | `local` | `local` (disk) or `s3` (S3-compatible). |
+| `STORAGE_LOCAL_DIR` | `var/uploads` | Upload directory when `STORAGE_PROVIDER=local`. |
+| `S3_ENDPOINT` / `S3_BUCKET` / `S3_REGION` | — | S3-compatible target (R2 / Backblaze / AWS). |
+| `S3_ACCESS_KEY_ID` / `S3_SECRET_ACCESS_KEY` | — | Credentials for the bucket above. |
+| `MAX_UPLOAD_MB` | `15` | Per-file upload size cap. |
+| `MAX_PAGES` | `6` | Max pages accepted per invoice (PDFs are split). |
+
+**Storage:** local disk is fine for development; for production point
+`STORAGE_PROVIDER=s3` at any S3-compatible bucket — Cloudflare R2, Backblaze B2,
+or AWS S3 all work via the `S3_*` settings above.
+
+**Quota:** each org has a daily extraction cap (`EXTRACTIONS_PER_DAY`); exceeding
+it returns a `429` `application/problem+json` response.
+
+### How the flow works
+
+1. **Upload** — snap a photo from your phone camera or drag-and-drop a file/PDF.
+2. **Hardening** — magic-byte type check, EXIF strip, downscale, and PDF → pages.
+3. **Extraction** — Claude vision runs in the background to propose line items.
+4. **Review** — edit lines, match each to an ingredient, and see the computed $/kg.
+5. **Commit** — accepted lines become price entries with full provenance
+   (`price_entries.invoice_line_id` links each price back to its source line).
+
+Accepted invoices can be flagged shareable via the org `contribute_prices` setting
+(the shared cross-org price graph lands in a future PR).
+
 ## Ops & production notes (PR-8)
 
 - **Multi-tenancy:** every table is `org_id`-scoped and every query flows through the

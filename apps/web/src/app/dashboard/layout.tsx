@@ -24,6 +24,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <Link href="/dashboard/stores" className="hover:text-foreground">
                 {t("stores")}
               </Link>
+              <Link href="/dashboard/invoices" className="hover:text-foreground">
+                {t("invoices")}
+              </Link>
               <Link href="/dashboard/compare" className="hover:text-foreground">
                 {t("compare")}
               </Link>

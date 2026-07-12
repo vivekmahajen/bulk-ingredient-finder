@@ -97,6 +97,73 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
   }
 }
 
+/** Same as {@link doFetch} but sends a `FormData` body. The browser sets the
+ * multipart `Content-Type` (with boundary) itself, so we must NOT set it here. */
+async function doUpload(path: string, formData: FormData): Promise<Response> {
+  const headers: Record<string, string> = {};
+  const csrf = csrfToken();
+  if (csrf) headers["X-CSRF-Token"] = csrf;
+  return fetch(`${API_URL}${path}`, {
+    method: "POST",
+    credentials: "include",
+    headers,
+    body: formData,
+    cache: "no-store",
+  });
+}
+
+/** Multipart upload sibling of {@link apiPost}: same CSRF + 401-refresh flow, but
+ * the payload is `FormData` rather than JSON. */
+export async function apiUpload<T>(path: string, formData: FormData): Promise<ApiResult<T>> {
+  try {
+    let resp = await doUpload(path, formData);
+
+    // Transparently refresh an expired access token once, then retry.
+    if (resp.status === 401 && !path.startsWith("/api/v1/auth/")) {
+      const refreshed = await fetch(`${API_URL}/api/v1/auth/refresh`, {
+        method: "POST",
+        credentials: "include",
+        cache: "no-store",
+      });
+      if (refreshed.ok) resp = await doUpload(path, formData);
+    }
+
+    if (resp.status === 204) {
+      return { ok: true, data: undefined as T };
+    }
+
+    const payload = (await resp.json().catch(() => ({}))) as unknown;
+
+    if (!resp.ok) {
+      const problem = (payload ?? {}) as Partial<Problem>;
+      return {
+        ok: false,
+        status: resp.status,
+        problem: {
+          ...problem,
+          type: problem.type ?? "about:blank",
+          title: problem.title ?? "Request failed",
+          status: resp.status,
+          detail: problem.detail,
+        },
+      };
+    }
+
+    return { ok: true, data: payload as T };
+  } catch (err) {
+    return {
+      ok: false,
+      status: 0,
+      problem: {
+        type: "about:blank",
+        title: "Network error",
+        status: 0,
+        detail: err instanceof Error ? err.message : "Could not reach the API.",
+      },
+    };
+  }
+}
+
 export const apiGet = <T>(path: string) => request<T>("GET", path);
 export const apiPost = <T>(path: string, body: unknown) => request<T>("POST", path, body);
 export const apiPatch = <T>(path: string, body: unknown) => request<T>("PATCH", path, body);
