@@ -15,8 +15,9 @@ from __future__ import annotations
 import os
 
 import uvicorn
-from alembic import command
 from alembic.config import Config
+
+from alembic import command
 
 
 def main() -> None:
