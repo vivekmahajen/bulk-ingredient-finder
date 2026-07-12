@@ -8,9 +8,15 @@ from __future__ import annotations
 
 from fastapi import APIRouter
 
+from app.api.v1 import ingredients, stores
+
 api_router = APIRouter()
 
 
 @api_router.get("/ping", tags=["meta"], summary="API v1 liveness ping")
 async def ping() -> dict[str, str]:
     return {"message": "pong", "version": "v1"}
+
+
+api_router.include_router(ingredients.router)
+api_router.include_router(stores.router)

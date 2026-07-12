@@ -54,17 +54,43 @@ Prerequisites: **Node ≥ 20 + pnpm 10**, **Python 3.12**, **PostgreSQL 16**.
 | `make migration m="msg"` | Autogenerate a new migration                |
 | `make seed`      | Seed the database (idempotent)                      |
 
-## API surface (PR-0)
+## API surface
 
-| Method & path        | Purpose                                             |
-| -------------------- | --------------------------------------------------- |
-| `GET /healthz`       | Liveness probe (200 JSON)                            |
-| `GET /readyz`        | Readiness probe (checks DB; 200 or 503)             |
-| `GET /api/v1/ping`   | Versioned API liveness ping                          |
-| `GET /docs`          | Swagger UI                                           |
+| Method & path                 | Purpose                                         |
+| ----------------------------- | ----------------------------------------------- |
+| `GET /healthz`                | Liveness probe (200 JSON)                        |
+| `GET /readyz`                 | Readiness probe (checks DB; 200 or 503)         |
+| `GET /api/v1/ping`            | Versioned API liveness ping                      |
+| `GET /api/v1/ingredients`     | List active ingredients (org-scoped) — PR-2      |
+| `GET /api/v1/ingredients/{id}`| Ingredient + aliases — PR-2                       |
+| `GET /api/v1/stores`          | List active stores (org-scoped) — PR-2           |
+| `GET /api/v1/stores/{id}`     | Store detail — PR-2                               |
+| `GET /docs`                   | Swagger UI                                        |
 
 Errors are returned as RFC-7807 `application/problem+json`. Logs are structured
 JSON (structlog) outside `development`.
+
+## Domain model (PR-2)
+
+Org-scoped catalog + pricing schema (migration `0002`). Every domain table carries
+`org_id`; **all** queries flow through `app/repositories/` so tenant isolation is
+never skipped (guarded by `tests/test_org_scoping.py`).
+
+- **ingredients** + **ingredient_aliases** — the multilingual catalog. Each alias
+  (`translation` / `transliteration` / `synonym` / `user_alias`) is trigram- and
+  `unaccent`-indexed so search finds an ingredient regardless of language/spelling.
+- **stores** — suppliers with kind, geo (`lat`/`lng`, earthdistance-indexed),
+  delivery days, min order.
+- **price_entries** — normalized to price per base unit via three STORED generated
+  columns (`unit_price_cents_per_kg` / `_per_l` / `_per_each`). Conversion factors
+  are the single source in `packages/shared/src/units.ts` and `apps/api/app/units.py`
+  (property-tested with hypothesis; the TS mirror is covered by vitest).
+- **orgs** / **users** / **audit_log** — the minimal tenancy + attribution substrate
+  that PR-1 auth extends.
+
+`make seed` idempotently loads the **Hari Om** dogfood org, an owner user, the 29
+starter ingredients (frequencies per the forecast rule: staples monthly,
+dairy/protein twice-weekly, produce weekly), and 6 starter stores.
 
 ## CI & deploy previews
 

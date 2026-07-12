@@ -9,13 +9,10 @@ from sqlalchemy import pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
+import app.models  # noqa: F401  -- registers all tables on Base.metadata
 from alembic import context
 from app.core.config import settings
 from app.db.base import Base
-
-# Import models here so ``Base.metadata`` is populated for autogenerate.
-# (Domain models land in PR-2; importing the package is a no-op until then.)
-# import app.models  # noqa: E402,F401  -- enable once models exist
 
 config = context.config
 config.set_main_option("sqlalchemy.url", settings.database_url)
