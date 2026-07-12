@@ -48,6 +48,65 @@ class Ingredient(UUIDPrimaryKeyMixin, OrgScopedMixin, TimestampMixin, Base):
         cascade="all, delete-orphan",
         passive_deletes=True,
     )
+    forecast: Mapped[IngredientForecast | None] = relationship(
+        back_populates="ingredient",
+        uselist=False,
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+
+
+# Monthly column names in order — kept here so model, schema, and migration agree.
+FORECAST_MONTHS: tuple[str, ...] = (
+    "jan",
+    "feb",
+    "mar",
+    "apr",
+    "may",
+    "jun",
+    "jul",
+    "aug",
+    "sep",
+    "oct",
+    "nov",
+    "dec",
+)
+
+
+class IngredientForecast(UUIDPrimaryKeyMixin, OrgScopedMixin, TimestampMixin, Base):
+    """Optional demand forecast + sourcing info for an ingredient (1:1).
+
+    Every field is nullable: a user may attach only a few months, or the full
+    year plus serving size and preferred vendor — or nothing at all.
+    """
+
+    __tablename__ = "ingredient_forecasts"
+    __table_args__ = (UniqueConstraint("ingredient_id", name="uq_forecast_ingredient"),)
+
+    ingredient_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("ingredients.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    jan: Mapped[float | None] = mapped_column(Numeric, nullable=True)
+    feb: Mapped[float | None] = mapped_column(Numeric, nullable=True)
+    mar: Mapped[float | None] = mapped_column(Numeric, nullable=True)
+    apr: Mapped[float | None] = mapped_column(Numeric, nullable=True)
+    may: Mapped[float | None] = mapped_column(Numeric, nullable=True)
+    jun: Mapped[float | None] = mapped_column(Numeric, nullable=True)
+    jul: Mapped[float | None] = mapped_column(Numeric, nullable=True)
+    aug: Mapped[float | None] = mapped_column(Numeric, nullable=True)
+    sep: Mapped[float | None] = mapped_column(Numeric, nullable=True)
+    oct: Mapped[float | None] = mapped_column(Numeric, nullable=True)
+    nov: Mapped[float | None] = mapped_column(Numeric, nullable=True)
+    dec: Mapped[float | None] = mapped_column(Numeric, nullable=True)
+    annual: Mapped[float | None] = mapped_column(Numeric, nullable=True)
+    g_ml_per_serving: Mapped[float | None] = mapped_column(Numeric, nullable=True)
+    recommended_vendor: Mapped[str | None] = mapped_column(Text, nullable=True)
+    vendor_website: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    ingredient: Mapped[Ingredient] = relationship(back_populates="forecast")
 
 
 class IngredientAlias(UUIDPrimaryKeyMixin, OrgScopedMixin, Base):
