@@ -30,6 +30,19 @@ export async function login(email: string, password: string): Promise<AuthResult
     : { ok: false, title: res.problem.title, detail: res.problem.detail, status: res.status };
 }
 
+export async function register(input: {
+  org_name: string;
+  email: string;
+  password: string;
+  display_name: string;
+  locale: string;
+}): Promise<AuthResult> {
+  const res = await apiPost<{ ok: boolean }>("/api/v1/auth/register", input);
+  return res.ok
+    ? { ok: true }
+    : { ok: false, title: res.problem.title, detail: res.problem.detail, status: res.status };
+}
+
 export async function requestMagicLink(email: string): Promise<AuthResult> {
   const res = await apiPost<{ ok: boolean }>("/api/v1/auth/magic-link", { email });
   return res.ok

@@ -192,6 +192,13 @@ export default function LoginPage(): React.JSX.Element {
               </Button>
             </form>
           )}
+
+          <div className="border-t pt-4 text-center text-sm">
+            <span className="text-muted-foreground">New user? </span>
+            <Link href="/register" className="font-medium underline-offset-4 hover:underline">
+              Register now
+            </Link>
+          </div>
         </CardContent>
         <CardFooter className="text-muted-foreground text-xs">
           Protecting your kitchen’s data.
