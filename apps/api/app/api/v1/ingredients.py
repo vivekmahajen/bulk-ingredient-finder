@@ -8,10 +8,11 @@ from __future__ import annotations
 
 import uuid
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import ProblemException
+from app.core.limiter import limiter
 from app.db.session import get_session
 from app.deps import RequestContext, get_context
 from app.models.enums import AliasKind
@@ -46,7 +47,9 @@ async def list_ingredients(
     status_code=status.HTTP_201_CREATED,
     summary="Add an ingredient (auto-detect/translate/transliterate + synonyms)",
 )
+@limiter.limit("30/minute")
 async def create_ingredient(
+    request: Request,
     payload: IngredientCreate,
     ctx: RequestContext = Depends(get_context),
     session: AsyncSession = Depends(get_session),

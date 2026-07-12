@@ -1,0 +1,41 @@
+{
+  "nav": {
+    "brand": "Rasoi Radar",
+    "ingredients": "सामग्री",
+    "stores": "दुकानें",
+    "compare": "तुलना करें",
+    "bulk": "थोक",
+    "logPrice": "कीमत दर्ज करें"
+  },
+  "dashboard": {
+    "title": "डैशबोर्ड",
+    "subtitle": "रेस्तरां के लिए थोक सामग्री की कीमत जानकारी।"
+  },
+  "ingredients": {
+    "title": "सामग्री",
+    "add": "सामग्री जोड़ें",
+    "searchPlaceholder": "किसी भी भाषा में खोजें…",
+    "needsReview": "समीक्षा आवश्यक",
+    "inCatalog": "आपकी सूची में",
+    "alsoSearchableAs": "इस नाम से भी खोजें:"
+  },
+  "stores": {
+    "title": "दुकानें",
+    "add": "दुकान जोड़ें",
+    "suppliers": "आपूर्तिकर्ता",
+    "delivers": "डिलीवरी करता है"
+  },
+  "compare": {
+    "title": "तुलना करें — सबसे सस्ती खरीद जगह",
+    "run": "इस सप्ताह की खरीद",
+    "singleStore": "एक ही दुकान",
+    "bestPerItem": "प्रति वस्तु सर्वोत्तम",
+    "splitSaves": "अलग-अलग खरीद से बचत",
+    "print": "खरीद सूची प्रिंट करें"
+  },
+  "common": {
+    "loading": "लोड हो रहा है…",
+    "save": "सहेजें",
+    "language": "भाषा"
+  }
+}

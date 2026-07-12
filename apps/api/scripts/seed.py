@@ -105,15 +105,110 @@ async def run_seed(session: AsyncSession) -> dict[str, int]:
     return created
 
 
-async def seed() -> None:
+DEMO_ORG_NAME = "Demo Kitchen"
+
+
+async def run_demo_seed(session: AsyncSession) -> dict[str, int]:
+    """Seed a self-contained demo org with prices, for screenshots (idempotent)."""
+    import datetime as _dt
+    from decimal import Decimal
+
+    from app.models.enums import DefaultUnit, PackUnit, PriceSource
+    from app.models.price import PriceEntry
+
+    org = (await session.execute(select(Org).where(Org.name == DEMO_ORG_NAME))).scalar_one_or_none()
+    if org is not None:
+        return {"demo_org": 0}
+    org = Org(name=DEMO_ORG_NAME, home_lat=40.5865, home_lng=-122.3917)  # Redding, CA
+    session.add(org)
+    await session.flush()
+
+    ingredients = [
+        Ingredient(
+            org_id=org.id,
+            canonical_name_en=canonical,
+            display_name=display,
+            source_lang="en",
+            category=category,
+            default_unit=DefaultUnit.KG,
+            purchase_frequency=freq,
+        )
+        for canonical, display, category, freq in [
+            (
+                "Basmati Rice",
+                "Basmati Rice",
+                seed_data.Category.STAPLE,
+                seed_data.PurchaseFrequency.MONTHLY,
+            ),
+            (
+                "Turmeric Powder",
+                "Haldi",
+                seed_data.Category.SPICE,
+                seed_data.PurchaseFrequency.MONTHLY,
+            ),
+            (
+                "Paneer",
+                "Paneer",
+                seed_data.Category.DAIRY,
+                seed_data.PurchaseFrequency.TWICE_WEEKLY,
+            ),
+        ]
+    ]
+    stores = [
+        Store(
+            org_id=org.id,
+            name="CHEF'STORE Redding",
+            kind=seed_data.StoreKind.CASH_AND_CARRY,
+            lat=40.5865,
+            lng=-122.3917,
+        ),
+        Store(
+            org_id=org.id,
+            name="Raja Foods",
+            kind=seed_data.StoreKind.ETHNIC_WHOLESALE,
+            delivers=True,
+            delivery_days=["Tue", "Fri"],
+        ),
+    ]
+    session.add_all([*ingredients, *stores])
+    await session.flush()
+
+    prices = [
+        (0, 0, "20 lb bag", 20, PackUnit.LB, 5200),
+        (0, 1, "25 lb bag", 25, PackUnit.LB, 6800),
+        (1, 0, "5 lb bag", 5, PackUnit.LB, 2400),
+        (2, 0, "2 kg tub", 2, PackUnit.KG, 1600),
+    ]
+    for ing_i, store_i, desc, qty, unit, cents in prices:
+        session.add(
+            PriceEntry(
+                org_id=org.id,
+                ingredient_id=ingredients[ing_i].id,
+                store_id=stores[store_i].id,
+                pack_desc=desc,
+                pack_qty=Decimal(qty),
+                pack_unit=unit,
+                price_cents=cents,
+                observed_at=_dt.date(2026, 7, 5),
+                source=PriceSource.INVOICE,
+            )
+        )
+    return {"demo_org": 1}
+
+
+async def seed(demo: bool = False) -> None:
     configure_logging()
     logger = get_logger("seed")
     async with async_session_factory() as session:
         created = await run_seed(session)
+        if demo:
+            created.update(await run_demo_seed(session))
         await session.commit()
     await engine.dispose()
     logger.info("seed_complete", **created)
 
 
 if __name__ == "__main__":
-    asyncio.run(seed())
+    import sys
+
+    asyncio.run(seed(demo="--demo" in sys.argv))

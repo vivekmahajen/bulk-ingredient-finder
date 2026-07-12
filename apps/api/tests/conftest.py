@@ -33,6 +33,7 @@ DOMAIN_TABLES = [
     "ingredients",
     "stores",
     "audit_log",
+    "translation_cache",
     "users",
     "orgs",
 ]

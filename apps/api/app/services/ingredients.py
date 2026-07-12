@@ -22,7 +22,7 @@ from app.models.enums import AliasKind
 from app.models.ingredient import Ingredient, IngredientAlias
 from app.schemas.ingredient import IngredientCreate
 from app.services import audit
-from app.services.translation import TranslationService
+from app.services.translation import TranslationService, to_english_cached
 from app.synonyms import find_group
 
 CONFIDENCE_THRESHOLD = 0.7
@@ -57,8 +57,10 @@ async def add_ingredient(
             raise LanguageAmbiguous(detection.lang, detection.candidates)
         source_lang = detection.lang
 
-    # 2. Normalize to an English canonical name (+ transliteration).
-    outcome = await translation.to_english(display_name=display_name, source_lang=source_lang)
+    # 2. Normalize to an English canonical name (+ transliteration), via the cache.
+    outcome = await to_english_cached(
+        session, translation, display_name=display_name, source_lang=source_lang
+    )
 
     ingredient = Ingredient(
         org_id=ctx.org_id,
