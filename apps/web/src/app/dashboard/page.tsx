@@ -10,23 +10,23 @@ export default function DashboardHome() {
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
         <Link href="/dashboard/ingredients">
-          <Card className="transition-colors hover:border-foreground/30">
+          <Card className="hover:border-foreground/30 transition-colors">
             <CardHeader>
               <CardTitle>Ingredients</CardTitle>
               <CardDescription>Your multilingual catalog — add and search.</CardDescription>
             </CardHeader>
-            <CardContent className="text-sm text-muted-foreground">
+            <CardContent className="text-muted-foreground text-sm">
               Add an ingredient in any language; we translate and make it searchable.
             </CardContent>
           </Card>
         </Link>
         <Link href="/dashboard/stores">
-          <Card className="transition-colors hover:border-foreground/30">
+          <Card className="hover:border-foreground/30 transition-colors">
             <CardHeader>
               <CardTitle>Stores</CardTitle>
               <CardDescription>Suppliers you buy from.</CardDescription>
             </CardHeader>
-            <CardContent className="text-sm text-muted-foreground">
+            <CardContent className="text-muted-foreground text-sm">
               Broadline, cash-and-carry, and ethnic-wholesale suppliers.
             </CardContent>
           </Card>

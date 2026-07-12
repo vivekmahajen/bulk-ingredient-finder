@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter
 
-from app.api.v1 import ingredients, stores
+from app.api.v1 import ingredients, search, stores
 
 api_router = APIRouter()
 
@@ -20,3 +20,4 @@ async def ping() -> dict[str, str]:
 
 api_router.include_router(ingredients.router)
 api_router.include_router(stores.router)
+api_router.include_router(search.router)

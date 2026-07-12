@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { CommandPalette } from "@/components/command-palette";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -8,17 +9,21 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <Link href="/dashboard" className="font-semibold tracking-tight">
             Rasoi Radar
           </Link>
-          <nav className="flex items-center gap-4 text-sm text-muted-foreground">
+          <nav className="text-muted-foreground flex items-center gap-4 text-sm">
             <Link href="/dashboard/ingredients" className="hover:text-foreground">
               Ingredients
             </Link>
             <Link href="/dashboard/stores" className="hover:text-foreground">
               Stores
             </Link>
+            <kbd className="bg-muted hidden items-center gap-1 rounded border px-1.5 py-0.5 font-mono text-[10px] sm:inline-flex">
+              ⌘K
+            </kbd>
           </nav>
         </div>
       </header>
       <div className="mx-auto max-w-5xl px-4 py-8">{children}</div>
+      <CommandPalette />
     </div>
   );
 }

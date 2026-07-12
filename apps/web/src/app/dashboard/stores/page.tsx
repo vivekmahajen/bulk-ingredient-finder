@@ -45,7 +45,7 @@ export default function StoresPage() {
                   <span className="font-medium">{store.name}</span>
                   <Badge variant="secondary">{store.kind.replace(/_/g, " ")}</Badge>
                 </div>
-                <p className="mt-1 text-xs text-muted-foreground">
+                <p className="text-muted-foreground mt-1 text-xs">
                   {[store.city, store.state].filter(Boolean).join(", ")}
                   {store.delivers ? " · delivers" : ""}
                 </p>
