@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { apiPost } from "@/lib/api";
 import {
   baseQuantity,
   dollars,
@@ -12,6 +13,8 @@ import {
   type IngredientCompare,
   type StoreOption,
 } from "@/lib/compare";
+import { discoverPrices, type DiscoveredSeller, type DiscoverResponse } from "@/lib/discovery";
+import { PACK_UNITS, type PackUnit, type PriceCreate } from "@/lib/prices";
 import { kindLabel, type Store, type StoreKind } from "@/lib/stores";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -65,6 +68,12 @@ export function SellersNearby({ ingredientId, ingredientName }: SellersNearbyPro
   const [loading, setLoading] = useState(true);
   const [preselectStoreId, setPreselectStoreId] = useState<string | undefined>(undefined);
 
+  // Web price discovery (estimated, live search).
+  const [webLocation, setWebLocation] = useState("");
+  const [discovering, setDiscovering] = useState(false);
+  const [discovered, setDiscovered] = useState<DiscoverResponse | null>(null);
+  const [savingKey, setSavingKey] = useState<string | null>(null);
+
   const load = useCallback(() => {
     setLoading(true);
     void fetchCompare({
@@ -103,6 +112,87 @@ export function SellersNearby({ ingredientId, ingredientName }: SellersNearbyPro
       title: "Seller added",
       description: `${s.name} is now in the system. Log its bulk price to compare it.`,
     });
+  }
+
+  async function runDiscovery() {
+    setDiscovering(true);
+    setDiscovered(null);
+    const res = await discoverPrices(ingredientId, { radiusMiles: miles, location: webLocation });
+    setDiscovering(false);
+    if (res === null) {
+      toast({
+        title: "Web search failed",
+        description: "Couldn't reach the price finder. Try again shortly.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setDiscovered(res);
+  }
+
+  function sellerKey(s: DiscoveredSeller, i: number): string {
+    return `${i}:${s.name}`;
+  }
+
+  /** Add a discovered seller as a store, plus its price when one was found. */
+  async function saveDiscovered(s: DiscoveredSeller, key: string) {
+    setSavingKey(key);
+    try {
+      const storeRes = await apiPost<Store>("/api/v1/stores", {
+        name: s.name,
+        kind: s.url ? "online" : "cash_and_carry",
+        website: s.url ?? undefined,
+        notes: s.location ?? undefined,
+      });
+      if (!storeRes.ok) {
+        toast({
+          title: storeRes.problem.title,
+          description: storeRes.problem.detail,
+          variant: "destructive",
+        });
+        return;
+      }
+      const store = storeRes.data;
+
+      const unit = s.pack_unit;
+      const canPrice =
+        s.price_cents != null &&
+        s.price_cents > 0 &&
+        s.pack_qty != null &&
+        s.pack_qty > 0 &&
+        unit != null &&
+        (PACK_UNITS as readonly string[]).includes(unit);
+
+      if (canPrice) {
+        const body: PriceCreate = {
+          ingredient_id: ingredientId,
+          store_id: store.id,
+          pack_desc: s.pack_desc ?? `${s.pack_qty} ${unit}`,
+          pack_qty: s.pack_qty as number,
+          pack_unit: unit as PackUnit,
+          price_cents: s.price_cents as number,
+          source: "website",
+        };
+        const priceRes = await apiPost<unknown>("/api/v1/prices", body);
+        if (!priceRes.ok) {
+          toast({
+            title: "Seller added, price not saved",
+            description: priceRes.problem.detail,
+            variant: "destructive",
+          });
+        } else {
+          toast({ title: "Saved", description: `${s.name} and its price were added.` });
+          load();
+        }
+      } else {
+        toast({
+          title: "Seller added",
+          description: `${s.name} added. No concrete price found — log one to compare it.`,
+        });
+      }
+    } finally {
+      setSavingKey(null);
+    }
   }
 
   return (
@@ -192,6 +282,29 @@ export function SellersNearby({ ingredientId, ingredientName }: SellersNearbyPro
           </div>
         </div>
 
+        {/* Live web discovery — find sellers + prices on the web for this radius. */}
+        <div className="flex flex-wrap items-end gap-2 rounded-md border border-dashed p-3">
+          <div className="space-y-1">
+            <label htmlFor="web-location" className="text-muted-foreground text-xs font-medium">
+              Search the web near (optional)
+            </label>
+            <Input
+              id="web-location"
+              value={webLocation}
+              onChange={(e) => setWebLocation(e.target.value)}
+              placeholder="City, State — defaults to your org location"
+              className="w-72"
+            />
+          </div>
+          <Button type="button" onClick={() => void runDiscovery()} disabled={discovering}>
+            {discovering ? "Searching the web…" : `🔎 Find cheapest on the web (${miles} mi)`}
+          </Button>
+          <p className="text-muted-foreground w-full text-xs">
+            Looks up bulk sellers and prices from public web sources. Estimates — verify before
+            ordering.
+          </p>
+        </div>
+
         {/* Cheapest highlight */}
         {cheapest && (
           <div className="bg-muted/50 rounded-lg border p-4">
@@ -246,6 +359,9 @@ export function SellersNearby({ ingredientId, ingredientName }: SellersNearbyPro
           </div>
         ) : (
           <div className="overflow-x-auto">
+            <div className="text-muted-foreground mb-1 text-xs font-medium">
+              Logged prices (from your team)
+            </div>
             <Table>
               <TableHeader>
                 <TableRow>
@@ -295,6 +411,104 @@ export function SellersNearby({ ingredientId, ingredientName }: SellersNearbyPro
                 ))}
               </TableBody>
             </Table>
+          </div>
+        )}
+
+        {/* Discovered from the web */}
+        {discovering && (
+          <p className="text-muted-foreground text-sm">Searching the web for sellers & prices…</p>
+        )}
+        {discovered !== null && (
+          <div className="space-y-3 rounded-lg border p-4">
+            <div className="flex items-center gap-2">
+              <h3 className="text-sm font-semibold">From the web</h3>
+              <Badge variant="warning">estimated</Badge>
+            </div>
+
+            {!discovered.configured ? (
+              <div className="text-muted-foreground space-y-1 text-sm">
+                <p>Web price discovery isn&apos;t set up yet.</p>
+                {discovered.notes.map((n, i) => (
+                  <p key={i} className="text-xs">
+                    {n}
+                  </p>
+                ))}
+              </div>
+            ) : discovered.sellers.length === 0 ? (
+              <div className="text-muted-foreground space-y-1 text-sm">
+                <p>No sellers found on the web for this ingredient and area.</p>
+                {discovered.notes.map((n, i) => (
+                  <p key={i} className="text-xs">
+                    {n}
+                  </p>
+                ))}
+              </div>
+            ) : (
+              <>
+                <ul className="divide-y">
+                  {discovered.sellers.map((s, i) => {
+                    const key = sellerKey(s, i);
+                    const priced = s.price_cents != null && s.pack_qty != null && s.pack_unit != null;
+                    return (
+                      <li key={key} className="flex flex-wrap items-start justify-between gap-2 py-3">
+                        <div className="min-w-0 space-y-0.5">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="font-medium">{s.name}</span>
+                            {i === 0 && s.unit_price_cents != null && <Badge>cheapest</Badge>}
+                            {s.url && (
+                              <a
+                                href={s.url}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="text-primary text-xs underline-offset-4 hover:underline"
+                              >
+                                source ↗
+                              </a>
+                            )}
+                          </div>
+                          <div className="text-muted-foreground text-xs">
+                            {s.price_cents != null ? dollars(s.price_cents) : (s.price_text ?? "price n/a")}
+                            {s.pack_desc ? ` · ${s.pack_desc}` : ""}
+                            {s.unit_price_cents != null
+                              ? ` · ${dollars(s.unit_price_cents)}/${s.base_unit}`
+                              : ""}
+                          </div>
+                          {(s.location || s.distance_note) && (
+                            <div className="text-muted-foreground text-xs">
+                              {[s.location, s.distance_note].filter(Boolean).join(" · ")}
+                            </div>
+                          )}
+                          {s.snippet && (
+                            <p className="text-muted-foreground max-w-prose text-xs italic">
+                              “{s.snippet}”
+                            </p>
+                          )}
+                        </div>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          disabled={savingKey === key}
+                          onClick={() => void saveDiscovered(s, key)}
+                        >
+                          {savingKey === key
+                            ? "Saving…"
+                            : priced
+                              ? "Save price"
+                              : "Add seller"}
+                        </Button>
+                      </li>
+                    );
+                  })}
+                </ul>
+                {discovered.notes.map((n, i) => (
+                  <p key={i} className="text-muted-foreground text-xs">
+                    {n}
+                  </p>
+                ))}
+                <p className="text-muted-foreground text-xs">{discovered.disclaimer}</p>
+              </>
+            )}
           </div>
         )}
       </CardContent>

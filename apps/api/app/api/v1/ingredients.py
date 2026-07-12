@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import uuid
 
-from fastapi import APIRouter, Depends, Request, Response, status
+from fastapi import APIRouter, Depends, Query, Request, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import ProblemException
@@ -18,6 +18,8 @@ from app.deps import RequestContext, get_context
 from app.models.enums import AliasKind
 from app.models.ingredient import IngredientAlias
 from app.repositories.ingredients import IngredientRepository
+from app.repositories.tenancy import OrgRepository
+from app.schemas.discovery import DiscoverResponse
 from app.schemas.ingredient import (
     AliasCreate,
     BulkIngredientCreate,
@@ -29,6 +31,7 @@ from app.schemas.ingredient import (
 )
 from app.services import audit
 from app.services.ingredients import LanguageAmbiguous, add_ingredient
+from app.services.price_discovery import DiscoveryQuery, get_discovery_service
 from app.services.translation import TranslationService, get_translation_service
 
 router = APIRouter(prefix="/ingredients", tags=["ingredients"])
@@ -125,6 +128,60 @@ async def create_ingredients_bulk(
     return BulkIngredientResult(
         created=created, failed=len(payload.items) - created, results=results
     )
+
+
+@router.get(
+    "/{ingredient_id}/discover-prices",
+    response_model=DiscoverResponse,
+    summary="Find bulk sellers + prices on the web (estimated, not verified)",
+)
+@limiter.limit("6/minute")
+async def discover_prices(
+    request: Request,
+    ingredient_id: uuid.UUID,
+    radius_miles: float = Query(default=25, ge=0),
+    location: str | None = Query(default=None),
+    ctx: RequestContext = Depends(get_context),
+    session: AsyncSession = Depends(get_session),
+) -> DiscoverResponse:
+    ingredient = await IngredientRepository(session, ctx.org_id).get_with_aliases(ingredient_id)
+    if ingredient is None:
+        raise ProblemException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            title="Ingredient not found",
+            detail=f"No ingredient {ingredient_id} in this org.",
+        )
+
+    name = ingredient.canonical_name_en
+    aliases = [a.alias for a in ingredient.aliases if a.alias.lower() != name.lower()][:6]
+
+    loc = location.strip() if location and location.strip() else None
+    if loc is None:
+        org = await OrgRepository(session).get(ctx.org_id)
+        if org and org.home_lat is not None and org.home_lng is not None:
+            loc = f"latitude {float(org.home_lat):.4f}, longitude {float(org.home_lng):.4f}"
+    query_str = f"{name} bulk wholesale" + (f" near {loc}" if loc else "")
+
+    service = get_discovery_service()
+    if service is None:
+        return DiscoverResponse(
+            configured=False,
+            query=query_str,
+            notes=[
+                "Web price discovery isn't set up yet. Set DISCOVERY_PROVIDER=claude and "
+                "ANTHROPIC_API_KEY in the API environment to enable it."
+            ],
+        )
+
+    sellers, notes = await service.discover(
+        DiscoveryQuery(
+            ingredient_name=name,
+            aliases=aliases,
+            location=loc,
+            radius_miles=radius_miles or None,
+        )
+    )
+    return DiscoverResponse(configured=True, query=query_str, sellers=sellers, notes=notes)
 
 
 @router.post(

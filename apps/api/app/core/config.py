@@ -42,6 +42,15 @@ class Settings(BaseSettings):
     geocode_provider: str = "none"
     geocode_api_key: str = ""
 
+    # Web price discovery (optional). "claude" uses the Anthropic Messages API
+    # with the web-search tool to find bulk sellers + prices for an ingredient
+    # near the org's location; "none" disables it. Enable by setting
+    # DISCOVERY_PROVIDER=claude (the default) and ANTHROPIC_API_KEY.
+    discovery_provider: str = "claude"
+    anthropic_api_key: str = ""
+    discovery_model: str = "claude-sonnet-5"
+    discovery_timeout_s: float = 40.0
+
     # CORS — comma-separated extra origins in addition to localhost defaults.
     cors_origins: str = "http://localhost:3000"
 
