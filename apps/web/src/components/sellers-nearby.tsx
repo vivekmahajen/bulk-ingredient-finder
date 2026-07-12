@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { apiPost } from "@/lib/api";
 import {
   baseQuantity,
@@ -14,8 +15,9 @@ import {
   type StoreOption,
 } from "@/lib/compare";
 import { discoverPrices, type DiscoveredSeller, type DiscoverResponse } from "@/lib/discovery";
+import { useEnumLabels } from "@/lib/i18n-labels";
 import { PACK_UNITS, type PackUnit, type PriceCreate } from "@/lib/prices";
-import { kindLabel, type Store, type StoreKind } from "@/lib/stores";
+import { type Store } from "@/lib/stores";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -43,8 +45,8 @@ const CONFIDENCE_VARIANT: Record<string, "default" | "secondary" | "warning"> = 
   low: "warning",
 };
 
-function distanceLabel(o: StoreOption): string {
-  if (o.distance_km == null) return o.delivers ? "delivery" : "—";
+function distanceLabel(o: StoreOption, deliveryWord: string): string {
+  if (o.distance_km == null) return o.delivers ? deliveryWord : "—";
   return `${kmToMiles(o.distance_km).toFixed(1)} mi`;
 }
 
@@ -57,6 +59,9 @@ function packSize(o: StoreOption): string | null {
 
 export function SellersNearby({ ingredientId, ingredientName }: SellersNearbyProps) {
   const { toast } = useToast();
+  const t = useTranslations("sellers");
+  const tc = useTranslations("common");
+  const labels = useEnumLabels();
 
   const [miles, setMiles] = useState(25);
   const [milesInput, setMilesInput] = useState("25");
@@ -84,13 +89,13 @@ export function SellersNearby({ ingredientId, ingredientName }: SellersNearbyPro
       setLoading(false);
       if (res === null) {
         setData(null);
-        setNotes(["Couldn't load sellers. Try again."]);
+        setNotes([t("toastLoadFailed")]);
         return;
       }
       setData(res.ingredients[0] ?? null);
       setNotes(res.notes);
     });
-  }, [ingredientId, miles, includeDelivery]);
+  }, [ingredientId, miles, includeDelivery, t]);
 
   useEffect(() => {
     load();
@@ -109,8 +114,8 @@ export function SellersNearby({ ingredientId, ingredientName }: SellersNearbyPro
   function onSellerAdded(s: Store) {
     setPreselectStoreId(s.id);
     toast({
-      title: "Seller added",
-      description: `${s.name} is now in the system. Log its bulk price to compare it.`,
+      title: t("toastSellerAdded"),
+      description: t("toastSellerAddedInSystem", { name: s.name }),
     });
   }
 
@@ -121,8 +126,8 @@ export function SellersNearby({ ingredientId, ingredientName }: SellersNearbyPro
     setDiscovering(false);
     if (res === null) {
       toast({
-        title: "Web search failed",
-        description: "Couldn't reach the price finder. Try again shortly.",
+        title: t("toastWebFailed"),
+        description: t("toastWebFailedDesc"),
         variant: "destructive",
       });
       return;
@@ -168,8 +173,8 @@ export function SellersNearby({ ingredientId, ingredientName }: SellersNearbyPro
       if (store) {
         setPreselectStoreId(store.id);
         toast({
-          title: "Seller added",
-          description: `${s.name} added to your stores. Log a bulk price to compare it.`,
+          title: t("toastSellerAdded"),
+          description: t("toastSellerAddedStore", { name: s.name }),
         });
       }
     } finally {
@@ -195,12 +200,12 @@ export function SellersNearby({ ingredientId, ingredientName }: SellersNearbyPro
       const priceRes = await apiPost<unknown>("/api/v1/prices", body);
       if (!priceRes.ok) {
         toast({
-          title: "Seller added, price not saved",
+          title: t("toastPriceNotSaved"),
           description: priceRes.problem.detail,
           variant: "destructive",
         });
       } else {
-        toast({ title: "Saved", description: `${s.name} and its price were added.` });
+        toast({ title: t("toastSaved"), description: t("toastSavedDesc", { name: s.name }) });
         load();
       }
     } finally {
@@ -213,18 +218,15 @@ export function SellersNearby({ ingredientId, ingredientName }: SellersNearbyPro
       <CardHeader>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <CardTitle className="text-base">Sellers &amp; bulk pricing</CardTitle>
-            <CardDescription>
-              Every supplier pricing {ingredientName}, cheapest first — within your radius or that
-              delivers.
-            </CardDescription>
+            <CardTitle className="text-base">{t("title")}</CardTitle>
+            <CardDescription>{t("subtitle", { name: ingredientName })}</CardDescription>
           </div>
           <div className="flex flex-wrap gap-2">
             <StoreFormDialog
               onSaved={onSellerAdded}
               trigger={
                 <Button variant="outline" size="sm">
-                  ＋ Add a seller
+                  {t("addSeller")}
                 </Button>
               }
             />
@@ -233,7 +235,7 @@ export function SellersNearby({ ingredientId, ingredientName }: SellersNearbyPro
               ingredientName={ingredientName}
               storeId={preselectStoreId}
               onLogged={load}
-              trigger={<Button size="sm">Log a bulk price</Button>}
+              trigger={<Button size="sm">{t("logBulkPrice")}</Button>}
             />
           </div>
         </div>
@@ -244,7 +246,7 @@ export function SellersNearby({ ingredientId, ingredientName }: SellersNearbyPro
         <div className="flex flex-wrap items-end gap-3">
           <div className="space-y-1">
             <label htmlFor="radius-mi" className="text-muted-foreground text-xs font-medium">
-              Within (miles)
+              {t("within")}
             </label>
             <div className="flex items-center gap-2">
               <Input
@@ -282,7 +284,8 @@ export function SellersNearby({ ingredientId, ingredientName }: SellersNearbyPro
               variant={includeDelivery ? "default" : "outline"}
               onClick={() => setIncludeDelivery((v) => !v)}
             >
-              {includeDelivery ? "✓ " : ""}Include delivery
+              {includeDelivery ? "✓ " : ""}
+              {t("includeDelivery")}
             </Button>
             <Button
               type="button"
@@ -290,7 +293,8 @@ export function SellersNearby({ ingredientId, ingredientName }: SellersNearbyPro
               variant={bulkOnly ? "default" : "outline"}
               onClick={() => setBulkOnly((v) => !v)}
             >
-              {bulkOnly ? "✓ " : ""}Bulk packs only
+              {bulkOnly ? "✓ " : ""}
+              {t("bulkOnly")}
             </Button>
           </div>
         </div>
@@ -299,23 +303,20 @@ export function SellersNearby({ ingredientId, ingredientName }: SellersNearbyPro
         <div className="flex flex-wrap items-end gap-2 rounded-md border border-dashed p-3">
           <div className="space-y-1">
             <label htmlFor="web-location" className="text-muted-foreground text-xs font-medium">
-              Search the web near (optional)
+              {t("searchWebNear")}
             </label>
             <Input
               id="web-location"
               value={webLocation}
               onChange={(e) => setWebLocation(e.target.value)}
-              placeholder="City, State — defaults to your org location"
+              placeholder={t("searchWebPlaceholder")}
               className="w-72"
             />
           </div>
           <Button type="button" onClick={() => void runDiscovery()} disabled={discovering}>
-            {discovering ? "Searching the web…" : `🔎 Find cheapest on the web (${miles} mi)`}
+            {discovering ? t("searchingWeb") : t("findCheapest", { miles })}
           </Button>
-          <p className="text-muted-foreground w-full text-xs">
-            Looks up bulk sellers and prices from public web sources. Estimates — verify before
-            ordering.
-          </p>
+          <p className="text-muted-foreground w-full text-xs">{t("webHint")}</p>
         </div>
 
         {/* Cheapest highlight */}
@@ -324,23 +325,26 @@ export function SellersNearby({ ingredientId, ingredientName }: SellersNearbyPro
             <div className="flex flex-wrap items-baseline justify-between gap-2">
               <div>
                 <span className="text-muted-foreground text-xs">
-                  Cheapest within {miles} mi{bulkOnly ? " (bulk)" : ""}
+                  {bulkOnly ? t("cheapestWithinBulk", { miles }) : t("cheapestWithin", { miles })}
                 </span>
                 <div className="text-xl font-semibold">
                   {dollars(cheapest.unit_price_cents)}/{cheapest.base_unit} @ {cheapest.store_name}
                 </div>
                 <div className="text-muted-foreground text-xs">
-                  {dollars(cheapest.price_cents)} for {cheapest.pack_desc}
+                  {t("forPack", {
+                    price: dollars(cheapest.price_cents),
+                    pack: cheapest.pack_desc,
+                  })}
                   {cheapest.savings_vs_worst_pct > 0 &&
-                    ` · ${cheapest.savings_vs_worst_pct.toFixed(0)}% under the priciest`}
+                    ` · ${t("underPriciest", { pct: cheapest.savings_vs_worst_pct.toFixed(0) })}`}
                 </div>
               </div>
               <div className="text-muted-foreground text-right text-xs">
-                {distanceLabel(cheapest)}
+                {distanceLabel(cheapest, tc("delivery"))}
                 {cheapest.delivers && (
                   <>
                     {" · "}
-                    <Badge variant="secondary">delivers</Badge>
+                    <Badge variant="secondary">{tc("delivers")}</Badge>
                   </>
                 )}
               </div>
@@ -350,40 +354,33 @@ export function SellersNearby({ ingredientId, ingredientName }: SellersNearbyPro
 
         {/* Seller table */}
         {loading ? (
-          <p className="text-muted-foreground text-sm">Loading sellers…</p>
+          <p className="text-muted-foreground text-sm">{t("loadingSellers")}</p>
         ) : options.length === 0 ? (
           <div className="text-muted-foreground space-y-2 text-sm">
             <p>
-              {allOptions.length > 0 && bulkOnly
-                ? "No bulk-sized packs among the sellers in range. Turn off “Bulk packs only” to see all."
-                : "No sellers found for this ingredient in range."}
+              {allOptions.length > 0 && bulkOnly ? t("noBulkInRange") : t("noSellersInRange")}
             </p>
             {notes.map((n, i) => (
               <p key={i} className="text-xs">
                 {n}
               </p>
             ))}
-            {allOptions.length === 0 && (
-              <p className="text-xs">
-                Add a seller and log its bulk price, or widen the radius / enable delivery. Distances
-                need your org home location set (Stores → set location).
-              </p>
-            )}
+            {allOptions.length === 0 && <p className="text-xs">{t("addOrWidenHint")}</p>}
           </div>
         ) : (
           <div className="overflow-x-auto">
             <div className="text-muted-foreground mb-1 text-xs font-medium">
-              Logged prices (from your team)
+              {t("loggedPrices")}
             </div>
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Seller</TableHead>
-                  <TableHead className="text-right">Unit price</TableHead>
-                  <TableHead>Pack</TableHead>
-                  <TableHead className="text-right">Pack price</TableHead>
-                  <TableHead className="text-right">Distance</TableHead>
-                  <TableHead>Freshness</TableHead>
+                  <TableHead>{t("colSeller")}</TableHead>
+                  <TableHead className="text-right">{t("colUnitPrice")}</TableHead>
+                  <TableHead>{t("colPack")}</TableHead>
+                  <TableHead className="text-right">{t("colPackPrice")}</TableHead>
+                  <TableHead className="text-right">{t("colDistance")}</TableHead>
+                  <TableHead>{t("colFreshness")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -392,13 +389,13 @@ export function SellersNearby({ ingredientId, ingredientName }: SellersNearbyPro
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <span>{o.store_name}</span>
-                        {i === 0 && <Badge>cheapest</Badge>}
-                        {isBulk(o) && <Badge variant="secondary">bulk</Badge>}
+                        {i === 0 && <Badge>{t("cheapest")}</Badge>}
+                        {isBulk(o) && <Badge variant="secondary">{t("bulk")}</Badge>}
                       </div>
                       <div className="text-muted-foreground text-xs">
-                        {o.store_kind ? kindLabel(o.store_kind as StoreKind) : "—"}
+                        {o.store_kind ? labels.storeKind(o.store_kind) : "—"}
                         {o.brand ? ` · ${o.brand}` : ""}
-                        {o.delivers ? " · delivers" : ""}
+                        {o.delivers ? ` · ${tc("delivers")}` : ""}
                       </div>
                     </TableCell>
                     <TableCell className="text-right font-mono">
@@ -411,11 +408,13 @@ export function SellersNearby({ ingredientId, ingredientName }: SellersNearbyPro
                       )}
                     </TableCell>
                     <TableCell className="text-right font-mono">{dollars(o.price_cents)}</TableCell>
-                    <TableCell className="text-right text-xs">{distanceLabel(o)}</TableCell>
+                    <TableCell className="text-right text-xs">
+                      {distanceLabel(o, tc("delivery"))}
+                    </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1.5">
                         <Badge variant={CONFIDENCE_VARIANT[o.confidence] ?? "secondary"}>
-                          {o.confidence}
+                          {labels.confidence(o.confidence)}
                         </Badge>
                         <span className="text-muted-foreground text-xs">{o.observed_at}</span>
                       </div>
@@ -429,18 +428,18 @@ export function SellersNearby({ ingredientId, ingredientName }: SellersNearbyPro
 
         {/* Discovered from the web */}
         {discovering && (
-          <p className="text-muted-foreground text-sm">Searching the web for sellers & prices…</p>
+          <p className="text-muted-foreground text-sm">{t("searchingSellers")}</p>
         )}
         {discovered !== null && (
           <div className="space-y-3 rounded-lg border p-4">
             <div className="flex items-center gap-2">
-              <h3 className="text-sm font-semibold">From the web</h3>
-              <Badge variant="warning">estimated</Badge>
+              <h3 className="text-sm font-semibold">{t("fromWeb")}</h3>
+              <Badge variant="warning">{tc("estimated")}</Badge>
             </div>
 
             {!discovered.configured ? (
               <div className="text-muted-foreground space-y-1 text-sm">
-                <p>Web price discovery isn&apos;t set up yet.</p>
+                <p>{t("notConfigured")}</p>
                 {discovered.notes.map((n, i) => (
                   <p key={i} className="text-xs">
                     {n}
@@ -449,7 +448,7 @@ export function SellersNearby({ ingredientId, ingredientName }: SellersNearbyPro
               </div>
             ) : discovered.sellers.length === 0 ? (
               <div className="text-muted-foreground space-y-1 text-sm">
-                <p>No sellers found on the web for this ingredient and area.</p>
+                <p>{t("noWebSellers")}</p>
                 {discovered.notes.map((n, i) => (
                   <p key={i} className="text-xs">
                     {n}
@@ -467,7 +466,7 @@ export function SellersNearby({ ingredientId, ingredientName }: SellersNearbyPro
                         <div className="min-w-0 space-y-0.5">
                           <div className="flex flex-wrap items-center gap-2">
                             <span className="font-medium">{s.name}</span>
-                            {i === 0 && s.unit_price_cents != null && <Badge>cheapest</Badge>}
+                            {i === 0 && s.unit_price_cents != null && <Badge>{t("cheapest")}</Badge>}
                             {s.url && (
                               <a
                                 href={s.url}
@@ -475,12 +474,12 @@ export function SellersNearby({ ingredientId, ingredientName }: SellersNearbyPro
                                 rel="noreferrer"
                                 className="text-primary text-xs underline-offset-4 hover:underline"
                               >
-                                source ↗
+                                {tc("source")} ↗
                               </a>
                             )}
                           </div>
                           <div className="text-muted-foreground text-xs">
-                            {s.price_cents != null ? dollars(s.price_cents) : (s.price_text ?? "price n/a")}
+                            {s.price_cents != null ? dollars(s.price_cents) : (s.price_text ?? t("priceNa"))}
                             {s.pack_desc ? ` · ${s.pack_desc}` : ""}
                             {s.unit_price_cents != null
                               ? ` · ${dollars(s.unit_price_cents)}/${s.base_unit}`
@@ -505,7 +504,7 @@ export function SellersNearby({ ingredientId, ingredientName }: SellersNearbyPro
                             disabled={savingKey === key}
                             onClick={() => void addSellerOnly(s, key)}
                           >
-                            {savingKey === key ? "Saving…" : "Add seller"}
+                            {savingKey === key ? tc("saving") : t("addSellerBtn")}
                           </Button>
                           {priced && (
                             <Button
@@ -514,7 +513,7 @@ export function SellersNearby({ ingredientId, ingredientName }: SellersNearbyPro
                               disabled={savingKey === key}
                               onClick={() => void saveSellerAndPrice(s, key)}
                             >
-                              Save price
+                              {t("savePrice")}
                             </Button>
                           )}
                         </div>

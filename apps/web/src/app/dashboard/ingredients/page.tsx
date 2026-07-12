@@ -1,8 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { apiGet } from "@/lib/api";
+import { useEnumLabels } from "@/lib/i18n-labels";
 import type { Ingredient } from "@/lib/types";
 import { searchIngredients, type SearchHit } from "@/lib/search";
 import { formatBestPrice, highlightMatch } from "@/lib/format";
@@ -12,6 +14,8 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 
 export default function IngredientsPage() {
+  const t = useTranslations("ingredients");
+  const labels = useEnumLabels();
   const [ingredients, setIngredients] = useState<Ingredient[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
@@ -52,17 +56,17 @@ export default function IngredientsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Ingredients</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{t("title")}</h1>
           <p className="text-muted-foreground">
-            {ingredients ? `${ingredients.length} in your catalog` : "Loading…"}
+            {ingredients ? t("inCatalog", { count: ingredients.length }) : t("loading")}
           </p>
         </div>
         <div className="flex items-center gap-2">
           <Button asChild variant="outline">
-            <Link href="/dashboard/ingredients/bulk">⇪ Bulk upload</Link>
+            <Link href="/dashboard/ingredients/bulk">⇪ {t("bulkUpload")}</Link>
           </Button>
           <Button asChild>
-            <Link href="/dashboard/ingredients/new">＋ Add ingredient</Link>
+            <Link href="/dashboard/ingredients/new">＋ {t("add")}</Link>
           </Button>
         </div>
       </div>
@@ -70,10 +74,10 @@ export default function IngredientsPage() {
       <Input
         value={query}
         onChange={(e) => onSearch(e.target.value)}
-        placeholder="Search in any language — jeera, जीरा, cumin… (or press ⌘K)"
+        placeholder={t("searchPlaceholder")}
       />
       {searching && viaTranslation && (
-        <p className="text-muted-foreground text-xs">matched via translation</p>
+        <p className="text-muted-foreground text-xs">{t("matchedViaTranslation")}</p>
       )}
 
       {error && <p className="text-destructive text-sm">{error}</p>}
@@ -99,7 +103,7 @@ export default function IngredientsPage() {
                           </span>
                         </span>
                       )}
-                      {hit.needs_review && <Badge variant="warning">Needs review</Badge>}
+                      {hit.needs_review && <Badge variant="warning">{t("needsReview")}</Badge>}
                     </div>
                     {hit.best_price && (
                       <p className="text-muted-foreground mt-1 text-xs">
@@ -108,15 +112,15 @@ export default function IngredientsPage() {
                     )}
                   </div>
                   <div className="flex shrink-0 items-center gap-2">
-                    <Badge variant="secondary">{hit.category}</Badge>
-                    <Badge variant="outline">{hit.purchase_frequency.replace("_", " ")}</Badge>
+                    <Badge variant="secondary">{labels.category(hit.category)}</Badge>
+                    <Badge variant="outline">{labels.frequency(hit.purchase_frequency)}</Badge>
                   </div>
                 </CardContent>
               </Card>
             );
           })}
           {hits?.length === 0 && (
-            <p className="text-muted-foreground text-sm">No matches for “{query}”.</p>
+            <p className="text-muted-foreground text-sm">{t("noMatches", { query })}</p>
           )}
         </div>
       ) : (
@@ -131,17 +135,17 @@ export default function IngredientsPage() {
                       {ing.display_name.toLowerCase() !== ing.canonical_name_en.toLowerCase() && (
                         <span className="text-muted-foreground text-sm">· {ing.display_name}</span>
                       )}
-                      {ing.needs_review && <Badge variant="warning">Needs review</Badge>}
+                      {ing.needs_review && <Badge variant="warning">{t("needsReview")}</Badge>}
                     </div>
                     {ing.aliases.length > 0 && (
                       <p className="text-muted-foreground mt-1 truncate text-xs">
-                        also searchable as: {ing.aliases.map((a) => a.alias).join(", ")}
+                        {t("alsoSearchableAs")} {ing.aliases.map((a) => a.alias).join(", ")}
                       </p>
                     )}
                   </div>
                   <div className="flex shrink-0 items-center gap-2">
-                    <Badge variant="secondary">{ing.category}</Badge>
-                    <Badge variant="outline">{ing.purchase_frequency.replace("_", " ")}</Badge>
+                    <Badge variant="secondary">{labels.category(ing.category)}</Badge>
+                    <Badge variant="outline">{labels.frequency(ing.purchase_frequency)}</Badge>
                   </div>
                 </CardContent>
               </Card>

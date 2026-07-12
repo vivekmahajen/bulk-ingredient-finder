@@ -2,14 +2,18 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { apiGet } from "@/lib/api";
-import { kindLabel, type Store } from "@/lib/stores";
+import { type Store } from "@/lib/stores";
+import { useEnumLabels } from "@/lib/i18n-labels";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { StoreFormDialog } from "@/components/store-form-dialog";
 
 export default function StoresPage() {
+  const t = useTranslations("stores");
+  const labels = useEnumLabels();
   const [stores, setStores] = useState<Store[] | null>(null);
 
   const load = useCallback(() => {
@@ -26,12 +30,12 @@ export default function StoresPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Stores</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{t("title")}</h1>
           <p className="text-muted-foreground">
-            {stores ? `${stores.length} suppliers` : "Loading…"}
+            {stores ? `${stores.length} ${t("suppliers")}` : t("loading")}
           </p>
         </div>
-        <StoreFormDialog onSaved={load} trigger={<Button>＋ Add store</Button>} />
+        <StoreFormDialog onSaved={load} trigger={<Button>＋ {t("add")}</Button>} />
       </div>
 
       <div className="grid gap-3">
@@ -41,23 +45,23 @@ export default function StoresPage() {
               <Link href={`/dashboard/stores/${store.id}`} className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
                   <span className="font-medium">{store.name}</span>
-                  <Badge variant="secondary">{kindLabel(store.kind)}</Badge>
-                  {!store.geocoded && <Badge variant="warning">no location</Badge>}
+                  <Badge variant="secondary">{labels.storeKind(store.kind)}</Badge>
+                  {!store.geocoded && <Badge variant="warning">{t("noLocation")}</Badge>}
                 </div>
                 <p className="text-muted-foreground mt-1 text-xs">
                   {[store.city, store.state].filter(Boolean).join(", ")}
                   {store.delivers && store.delivery_days?.length
-                    ? ` · delivers ${store.delivery_days.join(", ")}`
+                    ? ` · ${t("delivers")} ${store.delivery_days.join(", ")}`
                     : store.delivers
-                      ? " · delivers"
+                      ? ` · ${t("delivers")}`
                       : ""}
-                  {store.min_order ? ` · min $${store.min_order}` : ""}
+                  {store.min_order ? ` · ${t("minOrder", { amount: store.min_order })}` : ""}
                 </p>
               </Link>
               <div className="flex shrink-0 items-center gap-3">
                 {store.distance_km != null && (
                   <span className="text-muted-foreground text-sm">
-                    {store.distance_km.toFixed(0)} km
+                    {t("kmValue", { km: store.distance_km.toFixed(0) })}
                   </span>
                 )}
                 {store.website && (
@@ -67,7 +71,7 @@ export default function StoresPage() {
                     target="_blank"
                     rel="noreferrer"
                   >
-                    Website
+                    {t("website")}
                   </a>
                 )}
               </div>
@@ -77,7 +81,7 @@ export default function StoresPage() {
       </div>
 
       {stores?.length === 0 && (
-        <p className="text-muted-foreground text-sm">No stores yet. Add your first supplier.</p>
+        <p className="text-muted-foreground text-sm">{t("empty")}</p>
       )}
     </div>
   );

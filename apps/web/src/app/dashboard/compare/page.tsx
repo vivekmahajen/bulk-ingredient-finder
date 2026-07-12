@@ -2,7 +2,9 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 
+import { useEnumLabels } from "@/lib/i18n-labels";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
@@ -37,18 +39,25 @@ const CONFIDENCE_VARIANT: Record<StoreOption["confidence"], "default" | "seconda
 };
 
 function ConfidenceBadge({ option }: { option: StoreOption }) {
+  const t = useTranslations("compare");
+  const labels = useEnumLabels();
   return (
     <span className="inline-flex items-center gap-1">
-      <Badge variant={CONFIDENCE_VARIANT[option.confidence]}>{option.confidence}</Badge>
-      {option.age_days > 90 ? <Badge variant="warning">stale</Badge> : null}
+      <Badge variant={CONFIDENCE_VARIANT[option.confidence]}>
+        {labels.confidence(option.confidence)}
+      </Badge>
+      {option.age_days > 90 ? <Badge variant="warning">{t("stale")}</Badge> : null}
     </span>
   );
 }
 
-function optionMeta(option: StoreOption): string {
+function optionMeta(option: StoreOption, t: ReturnType<typeof useTranslations>): string {
   const parts: string[] = [];
-  parts.push(`${new Date(option.observed_at).toLocaleDateString()} · ${option.age_days}d ago`);
-  if (option.distance_km != null) parts.push(`${option.distance_km.toFixed(0)} km`);
+  parts.push(
+    `${new Date(option.observed_at).toLocaleDateString()} · ${t("daysAgo", { days: option.age_days })}`,
+  );
+  if (option.distance_km != null)
+    parts.push(t("kmValue", { km: option.distance_km.toFixed(0) }));
   return parts.join(" · ");
 }
 
@@ -72,6 +81,8 @@ function groupByWinningStore(
 }
 
 export default function ComparePage() {
+  const t = useTranslations("compare");
+  const labels = useEnumLabels();
   const [selected, setSelected] = useState<SelectedIngredient[]>([]);
   const [radiusKm, setRadiusKm] = useState<number | null>(25);
   const [includeDelivery, setIncludeDelivery] = useState<boolean>(true);
@@ -166,25 +177,22 @@ export default function ComparePage() {
       `}</style>
 
       <header className="print-hide space-y-1">
-        <h1 className="text-3xl font-bold tracking-tight">Compare — cheapest place to buy</h1>
-        <p className="text-muted-foreground">
-          Pick ingredients or load a frequency run to see where each is cheapest — within a radius
-          or including delivery.
-        </p>
+        <h1 className="text-3xl font-bold tracking-tight">{t("title")}</h1>
+        <p className="text-muted-foreground">{t("subtitle")}</p>
       </header>
 
       {/* Controls */}
       <Card className="print-hide print:hidden">
         <CardHeader>
-          <CardTitle>What are you buying?</CardTitle>
-          <CardDescription>Search ingredients, or load a saved shopping run.</CardDescription>
+          <CardTitle>{t("whatBuying")}</CardTitle>
+          <CardDescription>{t("controlsDescription")}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-5">
           {/* Ingredient multi-select */}
           <div className="relative">
             <Input
               value={query}
-              placeholder="Search ingredients…"
+              placeholder={t("searchPlaceholder")}
               onChange={(e) => setQuery(e.target.value)}
               onFocus={() => setSearchOpen(searchResults.length > 0)}
             />
@@ -200,7 +208,7 @@ export default function ComparePage() {
                     <span className="font-medium">{hit.canonical_name_en}</span>
                     {hit.matched_text && hit.matched_text !== hit.canonical_name_en ? (
                       <span className="text-muted-foreground text-xs">
-                        matched “{hit.matched_text}”
+                        {t("matched", { text: hit.matched_text })}
                       </span>
                     ) : null}
                   </button>
@@ -216,7 +224,7 @@ export default function ComparePage() {
                   {s.name}
                   <button
                     type="button"
-                    aria-label={`Remove ${s.name}`}
+                    aria-label={t("remove", { name: s.name })}
                     className="hover:text-destructive ml-1 rounded-sm"
                     onClick={() => removeIngredient(s.id)}
                   >
@@ -226,22 +234,22 @@ export default function ComparePage() {
               ))}
             </div>
           ) : (
-            <p className="text-muted-foreground text-sm">No ingredients selected yet.</p>
+            <p className="text-muted-foreground text-sm">{t("noneSelected")}</p>
           )}
 
           {/* Load by frequency */}
           <div className="space-y-2">
-            <p className="text-sm font-medium">Load by frequency</p>
+            <p className="text-sm font-medium">{t("loadByFrequency")}</p>
             <div className="flex flex-wrap gap-2">
               <Button variant="default" onClick={() => runFrequency("weekly")} disabled={loading}>
-                This week&apos;s run
+                {t("thisWeekRun")}
               </Button>
               <Button
                 variant="secondary"
                 onClick={() => runFrequency("monthly")}
                 disabled={loading}
               >
-                Monthly run
+                {t("monthlyRun")}
               </Button>
               {FREQUENCIES.filter((f) => f.value !== "weekly" && f.value !== "monthly").map((f) => (
                 <Button
@@ -250,7 +258,7 @@ export default function ComparePage() {
                   onClick={() => runFrequency(f.value)}
                   disabled={loading}
                 >
-                  {f.label}
+                  {labels.frequency(f.value)}
                 </Button>
               ))}
             </div>
@@ -258,7 +266,7 @@ export default function ComparePage() {
 
           {/* Radius presets */}
           <div className="space-y-2">
-            <p className="text-sm font-medium">How far will you drive?</p>
+            <p className="text-sm font-medium">{t("howFar")}</p>
             <div className="flex flex-wrap gap-2">
               {RADIUS_PRESETS.map((preset) => (
                 <Button
@@ -273,7 +281,7 @@ export default function ComparePage() {
                 variant={radiusKm === null ? "default" : "outline"}
                 onClick={() => setRadiusKm(null)}
               >
-                Any distance
+                {t("anyDistance")}
               </Button>
             </div>
           </div>
@@ -281,10 +289,10 @@ export default function ComparePage() {
           {/* Delivery + Compare */}
           <div className="flex flex-wrap items-center gap-3">
             <Button variant="outline" onClick={() => setIncludeDelivery((v) => !v)}>
-              Delivery: {includeDelivery ? "on" : "off"}
+              {includeDelivery ? t("deliveryOn") : t("deliveryOff")}
             </Button>
             <Button onClick={runCompare} disabled={selected.length === 0 || loading}>
-              {loading ? "Comparing…" : "Compare"}
+              {loading ? t("comparing") : t("compare")}
             </Button>
           </div>
         </CardContent>
@@ -294,16 +302,16 @@ export default function ComparePage() {
       {result ? (
         <div className="print-root space-y-6 print:block">
           <div className="print-hide flex items-center justify-between">
-            <h2 className="text-xl font-semibold">Results</h2>
+            <h2 className="text-xl font-semibold">{t("results")}</h2>
             <Button variant="outline" onClick={() => window.print()}>
-              Print run
+              {t("printRun")}
             </Button>
           </div>
 
           {result.store_count === 0 ? (
             <Card>
               <CardContent className="text-muted-foreground py-6 text-sm">
-                No stores have data for this run yet.
+                {t("noStoreData")}
               </CardContent>
             </Card>
           ) : null}
@@ -312,22 +320,22 @@ export default function ComparePage() {
           {basket ? (
             <Card className="border-primary/40">
               <CardHeader>
-                <CardTitle>Basket summary</CardTitle>
+                <CardTitle>{t("basketSummary")}</CardTitle>
                 <CardDescription>
-                  Single store:{" "}
+                  {t("singleStore")}:{" "}
                   {basket.single_store
                     ? `${basket.single_store.store_name} ${dollars(basket.single_store.total_cents)}`
                     : "—"}{" "}
-                  · Best-per-item: {dollars(basket.best_per_item_total_cents)}
+                  · {t("bestPerItem")}: {dollars(basket.best_per_item_total_cents)}
                   {basket.split && basket.split.secondary
-                    ? ` · Split trip saves ${dollars(basket.split.savings_vs_single_cents)}`
+                    ? ` · ${t("splitSaves")} ${dollars(basket.split.savings_vs_single_cents)}`
                     : ""}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="grid gap-4 sm:grid-cols-3">
                   <div>
-                    <p className="text-muted-foreground text-xs uppercase">Single store</p>
+                    <p className="text-muted-foreground text-xs uppercase">{t("singleStore")}</p>
                     <p className="text-lg font-semibold">
                       {basket.single_store ? dollars(basket.single_store.total_cents) : "—"}
                     </p>
@@ -338,17 +346,19 @@ export default function ComparePage() {
                     ) : null}
                   </div>
                   <div>
-                    <p className="text-muted-foreground text-xs uppercase">Best per item</p>
+                    <p className="text-muted-foreground text-xs uppercase">{t("bestPerItem")}</p>
                     <p className="text-lg font-semibold">
                       {dollars(basket.best_per_item_total_cents)}
                     </p>
                   </div>
                   <div>
-                    <p className="text-muted-foreground text-xs uppercase">Split trip</p>
+                    <p className="text-muted-foreground text-xs uppercase">{t("splitTrip")}</p>
                     {basket.split && basket.split.secondary ? (
                       <>
                         <p className="text-lg font-semibold">
-                          saves {dollars(basket.split.savings_vs_single_cents)}
+                          {t("saves", {
+                            amount: dollars(basket.split.savings_vs_single_cents),
+                          })}
                         </p>
                         <p className="text-muted-foreground text-xs">
                           {basket.split.primary.store_name} + {basket.split.secondary.store_name}
@@ -380,8 +390,7 @@ export default function ComparePage() {
                   <CardHeader>
                     <CardTitle className="print-store-heading">{group.storeName}</CardTitle>
                     <CardDescription>
-                      Cheapest for {group.items.length} item
-                      {group.items.length === 1 ? "" : "s"}
+                      {t("cheapestForItems", { count: group.items.length })}
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="divide-y">
@@ -393,12 +402,12 @@ export default function ComparePage() {
                         <div className="min-w-0">
                           <p className="font-medium">{ingredient.canonical_name_en}</p>
                           <p className="text-muted-foreground text-xs">
-                            {winner.pack_desc} · {optionMeta(winner)}
+                            {winner.pack_desc} · {optionMeta(winner, t)}
                           </p>
                         </div>
                         <div className="flex items-center gap-2">
                           <span className="whitespace-nowrap font-semibold">
-                            {dollars(winner.unit_price_cents)}/{winner.base_unit}
+                            {dollars(winner.unit_price_cents)}/{labels.unit(winner.base_unit)}
                           </span>
                           <ConfidenceBadge option={winner} />
                         </div>
@@ -412,7 +421,7 @@ export default function ComparePage() {
 
           {/* Per-ingredient all options */}
           <div className="print-hide space-y-4">
-            <h3 className="text-lg font-semibold">All options per ingredient</h3>
+            <h3 className="text-lg font-semibold">{t("allOptions")}</h3>
             {result.ingredients.map((ingredient) => {
               const options = ingredient.options;
               const onlyOne = options.length === 1;
@@ -421,17 +430,15 @@ export default function ComparePage() {
                   <CardHeader>
                     <CardTitle className="text-base">{ingredient.canonical_name_en}</CardTitle>
                     {onlyOne ? (
-                      <CardDescription>
-                        only one store has data — not a real comparison
-                      </CardDescription>
+                      <CardDescription>{t("onlyOneStore")}</CardDescription>
                     ) : null}
                   </CardHeader>
                   <CardContent>
                     {options.length === 0 ? (
                       <p className="text-muted-foreground text-sm">
-                        No fresh prices —{" "}
+                        {t("noFreshPrices")}{" "}
                         <Link href="/dashboard/prices/bulk" className="underline">
-                          log one
+                          {t("logOne")}
                         </Link>
                       </p>
                     ) : (
@@ -445,16 +452,16 @@ export default function ComparePage() {
                               <span className="font-medium">{opt.store_name}</span>
                               <span className="text-muted-foreground ml-2 text-xs">
                                 {opt.distance_km != null
-                                  ? `${opt.distance_km.toFixed(0)} km`
-                                  : "distance n/a"}
+                                  ? t("kmValue", { km: opt.distance_km.toFixed(0) })
+                                  : t("distanceNa")}
                               </span>
                             </div>
                             <div className="flex items-center gap-2">
                               <span className="whitespace-nowrap">
-                                {dollars(opt.unit_price_cents)}/{ingredient.base_unit}
+                                {dollars(opt.unit_price_cents)}/{labels.unit(ingredient.base_unit)}
                               </span>
                               <span className="text-muted-foreground whitespace-nowrap text-xs">
-                                saves {opt.savings_vs_worst_pct.toFixed(0)}% vs worst
+                                {t("savesVsWorst", { pct: opt.savings_vs_worst_pct.toFixed(0) })}
                               </span>
                               <ConfidenceBadge option={opt} />
                             </div>
