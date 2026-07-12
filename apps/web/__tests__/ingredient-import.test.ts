@@ -6,13 +6,14 @@ import {
   parseIngredientTable,
 } from "@/lib/ingredient-import";
 
-// A slice of the real forecast spreadsheet (tab-separated, with header row).
+// A slice of the real forecast spreadsheet (tab-separated, with header row),
+// including the Recommended vendor + Website columns.
 const FORECAST = [
-  "Ingredient\tg/ml per serving\tJan\tFeb\tMar\tApr\tMay\tJun\tJul\tAug\tSep\tOct\tNov\tDec\tAnnual\tCategory\tPurchase as\tOrder cadence",
-  "Chicken (boneless)\t165\t49.4\t37.9\t45.0\t71.3\t100.4\t81.1\t125.2\t121.5\t79.9\t66.7\t73.7\t53.8\t906\tProtein\t40 lb case\t2×/week",
-  "Whole milk\t240\t61.8\t47.4\t56.3\t89.2\t125.6\t101.4\t156.5\t152.0\t99.9\t83.4\t92.1\t67.3\t1,133\tDairy\tGallon\t2×/week",
-  "Basmati rice (dry)\t75\t71.8\t55.2\t65.4\t103.7\t146.0\t118.0\t182.0\t176.7\t116.2\t97.0\t107.1\t78.2\t1,317\tStaple\t20 lb bags\tMonthly",
-  "Onions\t100\t71.5\t54.9\t65.1\t103.2\t145.3\t117.4\t181.2\t175.9\t115.6\t96.5\t106.6\t77.8\t1,311\tProduce\t50 lb sacks\tWeekly",
+  "Ingredient\tg/ml per serving\tJan\tFeb\tMar\tApr\tMay\tJun\tJul\tAug\tSep\tOct\tNov\tDec\tAnnual\tCategory\tPurchase as\tOrder cadence\tRecommended vendor\tWebsite",
+  "Chicken (boneless)\t165\t49.4\t37.9\t45.0\t71.3\t100.4\t81.1\t125.2\t121.5\t79.9\t66.7\t73.7\t53.8\t906\tProtein\t40 lb case\t2×/week\tSysco Sacramento / US Foods\tsysco.com · usfoods.com",
+  "Whole milk\t240\t61.8\t47.4\t56.3\t89.2\t125.6\t101.4\t156.5\t152.0\t99.9\t83.4\t92.1\t67.3\t1,133\tDairy\tGallon\t2×/week\tBroadline or local dairy route\tsysco.com · chefstore.com",
+  "Basmati rice (dry)\t75\t71.8\t55.2\t65.4\t103.7\t146.0\t118.0\t182.0\t176.7\t116.2\t97.0\t107.1\t78.2\t1,317\tStaple\t20 lb bags\tMonthly\tRaja Foods / House of Spices\trajafoods.com · hosindia.com",
+  "Onions\t100\t71.5\t54.9\t65.1\t103.2\t145.3\t117.4\t181.2\t175.9\t115.6\t96.5\t106.6\t77.8\t1,311\tProduce\t50 lb sacks\tWeekly\tProPacific Fresh\tpropacificfresh.com",
 ].join("\n");
 
 describe("parseIngredientTable — forecast spreadsheet (header-mapped)", () => {
@@ -32,6 +33,9 @@ describe("parseIngredientTable — forecast spreadsheet (header-mapped)", () => 
     expect(chicken.purchase_frequency).toBe("twice_weekly"); // "2×/week"
     expect(chicken.notes).toContain("40 lb case");
     expect(chicken.notes).toContain("165");
+    // Recommended vendor + Website columns are captured into notes.
+    expect(chicken.notes).toContain("Sysco Sacramento / US Foods");
+    expect(chicken.notes).toContain("sysco.com · usfoods.com");
 
     expect(rows[1].parsed!.default_unit).toBe("l"); // Whole milk / Gallon
     expect(rows[2].parsed!.purchase_frequency).toBe("monthly"); // Basmati rice

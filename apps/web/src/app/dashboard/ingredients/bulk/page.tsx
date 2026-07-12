@@ -115,9 +115,12 @@ export default function BulkIngredientsPage() {
               Has a header row with <span className="font-medium">Ingredient</span> and{" "}
               <span className="font-medium">Category</span>? Columns are auto-mapped —{" "}
               <span className="font-medium">Category</span>,{" "}
-              <span className="font-medium">Order cadence</span>, and{" "}
-              <span className="font-medium">Purchase as</span> are recognized, and forecast columns
-              (Jan–Dec, Annual) are ignored.
+              <span className="font-medium">Order cadence</span>,{" "}
+              <span className="font-medium">Purchase as</span>,{" "}
+              <span className="font-medium">Recommended vendor</span>, and{" "}
+              <span className="font-medium">Website</span> are recognized (vendor/website + pack are
+              kept in the ingredient&rsquo;s notes), and forecast columns (Jan–Dec, Annual) are
+              ignored.
             </span>
             <span className="mt-1 block">
               No header? Use:{" "}
