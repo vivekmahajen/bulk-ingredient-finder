@@ -41,10 +41,12 @@ def create_app() -> FastAPI:
     app.state.limiter = limiter
     app.add_exception_handler(RateLimitExceeded, _rate_limit_handler)
 
-    # CORS — restricted to the Vercel domain(s) + localhost.
+    # CORS — the exact origin list plus a regex (Vercel preview URLs by default);
+    # an origin is allowed if it matches either.
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origin_list,
+        allow_origin_regex=settings.cors_origin_regex_or_none,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
