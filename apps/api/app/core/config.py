@@ -41,8 +41,10 @@ class Settings(BaseSettings):
     # CORS — comma-separated extra origins in addition to localhost defaults.
     cors_origins: str = "http://localhost:3000"
 
-    # Tenancy
-    multi_tenant: bool = False
+    # Tenancy. Multi-tenant by default: self-registration is enabled and every
+    # request must carry a valid session (no implicit single-org fallback).
+    # Set MULTI_TENANT=false to run in single-restaurant "dogfood" mode.
+    multi_tenant: bool = True
 
     @property
     def is_development(self) -> bool:
