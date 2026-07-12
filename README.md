@@ -74,6 +74,10 @@ Prerequisites: **Node ≥ 20 + pnpm 10**, **Python 3.12**, **PostgreSQL 16**.
 | `GET /api/v1/stores/{id}/prices` | Latest price per ingredient at a store — PR-5 |
 | `GET /api/v1/stores/{id}/wins`| Ingredients this store wins on — PR-5            |
 | `GET`/`PATCH /api/v1/org`     | Read / set org home location (geocoded) — PR-5   |
+| `POST /api/v1/prices`         | Log a price (normalized + unit/category warnings) — PR-6 |
+| `POST /api/v1/prices/bulk`    | Bulk log ≤200 (207 per-row results) — PR-6      |
+| `GET /api/v1/prices`          | List prices (paginated, filterable) — PR-6      |
+| `GET /api/v1/ingredients/{id}/price-history` | Per-store time series — PR-6     |
 | `GET /docs`                   | Swagger UI                                        |
 
 Errors are returned as RFC-7807 `application/problem+json`. Logs are structured

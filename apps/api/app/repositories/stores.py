@@ -115,6 +115,13 @@ class StoreRepository(OrgScopedRepository[Store]):
         result = await self.session.execute(self.scoped().where(Store.name == name))
         return result.scalar_one_or_none()
 
+    async def existing_ids(self, ids: list[uuid.UUID]) -> set[uuid.UUID]:
+        if not ids:
+            return set()
+        stmt = self.scoped().where(Store.id.in_(ids))
+        rows = await self.session.execute(stmt)
+        return {s.id for s in rows.scalars().all()}
+
     async def list_stores(
         self,
         *,

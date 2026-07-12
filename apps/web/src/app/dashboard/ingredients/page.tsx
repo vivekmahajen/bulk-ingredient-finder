@@ -117,28 +117,30 @@ export default function IngredientsPage() {
       ) : (
         <div className="grid gap-3">
           {ingredients?.map((ing) => (
-            <Card key={ing.id}>
-              <CardContent className="flex items-center justify-between gap-4 py-4">
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium">{ing.canonical_name_en}</span>
-                    {ing.display_name.toLowerCase() !== ing.canonical_name_en.toLowerCase() && (
-                      <span className="text-muted-foreground text-sm">· {ing.display_name}</span>
+            <Link key={ing.id} href={`/dashboard/ingredients/${ing.id}`}>
+              <Card className="hover:border-foreground/30 transition-colors">
+                <CardContent className="flex items-center justify-between gap-4 py-4">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">{ing.canonical_name_en}</span>
+                      {ing.display_name.toLowerCase() !== ing.canonical_name_en.toLowerCase() && (
+                        <span className="text-muted-foreground text-sm">· {ing.display_name}</span>
+                      )}
+                      {ing.needs_review && <Badge variant="warning">Needs review</Badge>}
+                    </div>
+                    {ing.aliases.length > 0 && (
+                      <p className="text-muted-foreground mt-1 truncate text-xs">
+                        also searchable as: {ing.aliases.map((a) => a.alias).join(", ")}
+                      </p>
                     )}
-                    {ing.needs_review && <Badge variant="warning">Needs review</Badge>}
                   </div>
-                  {ing.aliases.length > 0 && (
-                    <p className="text-muted-foreground mt-1 truncate text-xs">
-                      also searchable as: {ing.aliases.map((a) => a.alias).join(", ")}
-                    </p>
-                  )}
-                </div>
-                <div className="flex shrink-0 items-center gap-2">
-                  <Badge variant="secondary">{ing.category}</Badge>
-                  <Badge variant="outline">{ing.purchase_frequency.replace("_", " ")}</Badge>
-                </div>
-              </CardContent>
-            </Card>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <Badge variant="secondary">{ing.category}</Badge>
+                    <Badge variant="outline">{ing.purchase_frequency.replace("_", " ")}</Badge>
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
           ))}
         </div>
       )}
