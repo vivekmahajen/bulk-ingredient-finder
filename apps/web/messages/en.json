@@ -1,0 +1,41 @@
+{
+  "nav": {
+    "brand": "Rasoi Radar",
+    "ingredients": "Ingredients",
+    "stores": "Stores",
+    "compare": "Compare",
+    "bulk": "Bulk",
+    "logPrice": "Log price"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "subtitle": "Restaurant bulk-ingredient price intelligence."
+  },
+  "ingredients": {
+    "title": "Ingredients",
+    "add": "Add ingredient",
+    "searchPlaceholder": "Search in any language…",
+    "needsReview": "Needs review",
+    "inCatalog": "in your catalog",
+    "alsoSearchableAs": "also searchable as:"
+  },
+  "stores": {
+    "title": "Stores",
+    "add": "Add store",
+    "suppliers": "suppliers",
+    "delivers": "delivers"
+  },
+  "compare": {
+    "title": "Compare — cheapest place to buy",
+    "run": "This week's run",
+    "singleStore": "Single store",
+    "bestPerItem": "Best-per-item",
+    "splitSaves": "Split trip saves",
+    "print": "Print run"
+  },
+  "common": {
+    "loading": "Loading…",
+    "save": "Save",
+    "language": "Language"
+  }
+}

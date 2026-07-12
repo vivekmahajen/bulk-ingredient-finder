@@ -23,6 +23,7 @@ from functools import lru_cache
 from typing import Protocol, TypeVar
 
 import httpx
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.logging import get_logger
@@ -271,3 +272,40 @@ def get_translation_provider() -> TranslationProvider:
 def get_translation_service() -> TranslationService:
     """App-scoped service so the circuit breaker persists across requests."""
     return TranslationService(get_translation_provider())
+
+
+async def to_english_cached(
+    session: AsyncSession,
+    service: TranslationService,
+    *,
+    display_name: str,
+    source_lang: str,
+) -> TranslationOutcome:
+    """Translate to English via the persistent cache, so we never pay twice.
+
+    English input and degraded (needs_review) results are not cached — only
+    confirmed non-English translations.
+    """
+    from app.repositories.translation_cache import TranslationCacheRepository
+
+    if source_lang.split("-")[0] == "en":
+        return await service.to_english(display_name=display_name, source_lang=source_lang)
+
+    repo = TranslationCacheRepository(session)
+    cached = await repo.get(display_name, source_lang, "en")
+    if cached is not None:
+        return TranslationOutcome(
+            canonical_en=cached.result, romanization=cached.romanization, needs_review=False
+        )
+
+    outcome = await service.to_english(display_name=display_name, source_lang=source_lang)
+    if not outcome.needs_review:
+        await repo.put(
+            source_text=display_name,
+            source_lang=source_lang,
+            target_lang="en",
+            result=outcome.canonical_en,
+            romanization=outcome.romanization,
+            provider=service.provider.name,
+        )
+    return outcome

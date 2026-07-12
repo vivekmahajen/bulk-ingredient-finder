@@ -14,6 +14,7 @@ from app.models.ingredient import Ingredient, IngredientAlias
 from app.models.org import Org
 from app.models.price import PriceEntry
 from app.models.store import Store
+from app.models.translation_cache import TranslationCache
 from app.models.user import User
 
 __all__ = [
@@ -30,5 +31,6 @@ __all__ = [
     "Role",
     "Store",
     "StoreKind",
+    "TranslationCache",
     "User",
 ]

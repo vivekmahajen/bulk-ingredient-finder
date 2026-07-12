@@ -80,7 +80,36 @@ Prerequisites: **Node ≥ 20 + pnpm 10**, **Python 3.12**, **PostgreSQL 16**.
 | `GET /api/v1/ingredients/{id}/price-history` | Per-store time series — PR-6     |
 | `GET`/`POST /api/v1/compare`  | Cheapest-by-radius; POST adds quantities — PR-7  |
 | `GET /api/v1/compare/frequency-run` | This week's shopping run — PR-7            |
+| `GET`/`PATCH /api/v1/me`      | Current user; `PATCH /me/locale` sets UI language — PR-8 |
+| `POST /api/v1/register`       | Org registration (403 unless `MULTI_TENANT=true`) — PR-8 |
 | `GET /docs`                   | Swagger UI                                        |
+
+## Internationalization (PR-8)
+
+The UI itself is localized with **next-intl** — English, हिन्दी (Hindi), and Español
+(Spanish) message catalogs live in `apps/web/messages/`. The language switcher sets
+the `NEXT_LOCALE` cookie and mirrors the choice to `users.locale` via
+`PATCH /api/v1/me/locale`, so it persists across devices. The app that celebrates
+multilingual *data* isn't English-only *chrome*.
+
+## Ops & production notes (PR-8)
+
+- **Multi-tenancy:** every table is `org_id`-scoped and every query flows through the
+  repository layer; a cross-tenant leak test suite (`tests/test_multitenant_leak.py`)
+  asserts org A can never read org B's data. Self-registration is gated behind
+  `MULTI_TENANT` (ships `false`).
+- **Rate limits:** search (`60/min`) and the translation-backed add-ingredient
+  endpoint (`30/min`) are throttled via slowapi.
+- **Translation cache:** `translation_cache` (unique on
+  `source_text, source_lang, target_lang`) means a given translation is paid for once.
+- **Backups:** enable Railway PostgreSQL **daily automated backups** for the database;
+  verify a restore quarterly.
+- **Error reporting:** set `SENTRY_DSN` (API) and `NEXT_PUBLIC_SENTRY_DSN` (web) to
+  turn on Sentry.
+- **Uptime:** point an uptime probe at `GET /healthz` (liveness) and gate traffic on
+  `GET /readyz` (readiness, checks the DB).
+- **Demo data:** `python -m scripts.seed --demo` adds a self-contained "Demo Kitchen"
+  org with sample prices for screenshots.
 
 Errors are returned as RFC-7807 `application/problem+json`. Logs are structured
 JSON (structlog) outside `development`.

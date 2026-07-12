@@ -1,0 +1,41 @@
+{
+  "nav": {
+    "brand": "Rasoi Radar",
+    "ingredients": "Ingredientes",
+    "stores": "Tiendas",
+    "compare": "Comparar",
+    "bulk": "Al por mayor",
+    "logPrice": "Registrar precio"
+  },
+  "dashboard": {
+    "title": "Panel",
+    "subtitle": "Inteligencia de precios de ingredientes al por mayor para restaurantes."
+  },
+  "ingredients": {
+    "title": "Ingredientes",
+    "add": "Añadir ingrediente",
+    "searchPlaceholder": "Busca en cualquier idioma…",
+    "needsReview": "Requiere revisión",
+    "inCatalog": "en tu catálogo",
+    "alsoSearchableAs": "también se busca como:"
+  },
+  "stores": {
+    "title": "Tiendas",
+    "add": "Añadir tienda",
+    "suppliers": "proveedores",
+    "delivers": "reparte"
+  },
+  "compare": {
+    "title": "Comparar — dónde comprar más barato",
+    "run": "Compra de esta semana",
+    "singleStore": "Una sola tienda",
+    "bestPerItem": "Mejor por artículo",
+    "splitSaves": "Ahorro al dividir la compra",
+    "print": "Imprimir compra"
+  },
+  "common": {
+    "loading": "Cargando…",
+    "save": "Guardar",
+    "language": "Idioma"
+  }
+}

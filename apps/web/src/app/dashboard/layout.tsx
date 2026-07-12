@@ -1,37 +1,41 @@
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { CommandPalette } from "@/components/command-palette";
 import { LogPriceDialog } from "@/components/log-price-dialog";
+import { LanguageSwitcher } from "@/components/language-switcher";
 import { Button } from "@/components/ui/button";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+  const t = useTranslations("nav");
   return (
     <div className="min-h-screen">
       <header className="border-b">
         <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4">
           <Link href="/dashboard" className="font-semibold tracking-tight">
-            Rasoi Radar
+            {t("brand")}
           </Link>
-          <nav className="text-muted-foreground flex items-center gap-4 text-sm">
+          <nav className="flex items-center gap-4 text-sm text-muted-foreground">
             <Link href="/dashboard/ingredients" className="hover:text-foreground">
-              Ingredients
+              {t("ingredients")}
             </Link>
             <Link href="/dashboard/stores" className="hover:text-foreground">
-              Stores
+              {t("stores")}
             </Link>
             <Link href="/dashboard/compare" className="hover:text-foreground">
-              Compare
+              {t("compare")}
             </Link>
             <Link href="/dashboard/prices/bulk" className="hover:text-foreground">
-              Bulk
+              {t("bulk")}
             </Link>
             <LogPriceDialog
               trigger={
                 <Button size="sm" variant="outline">
-                  Log a price
+                  {t("logPrice")}
                 </Button>
               }
             />
-            <kbd className="bg-muted hidden items-center gap-1 rounded border px-1.5 py-0.5 font-mono text-[10px] sm:inline-flex">
+            <LanguageSwitcher />
+            <kbd className="hidden items-center gap-1 rounded border bg-muted px-1.5 py-0.5 font-mono text-[10px] sm:inline-flex">
               ⌘K
             </kbd>
           </nav>
