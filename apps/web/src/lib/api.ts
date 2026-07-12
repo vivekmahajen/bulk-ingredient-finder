@@ -19,15 +19,44 @@ export type ApiResult<T> = { ok: true; data: T } | { ok: false; status: number; 
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
+const MUTATING = new Set(["POST", "PUT", "PATCH", "DELETE"]);
+
+/** Read the non-httpOnly CSRF cookie so we can echo it in the header. */
+function csrfToken(): string | null {
+  if (typeof document === "undefined") return null;
+  const match = document.cookie.match(/(?:^|;\s*)rr_csrf=([^;]+)/);
+  return match ? decodeURIComponent(match[1]) : null;
+}
+
+async function doFetch(method: string, path: string, body?: unknown): Promise<Response> {
+  const headers: Record<string, string> = {};
+  if (body !== undefined) headers["Content-Type"] = "application/json";
+  if (MUTATING.has(method)) {
+    const csrf = csrfToken();
+    if (csrf) headers["X-CSRF-Token"] = csrf;
+  }
+  return fetch(`${API_URL}${path}`, {
+    method,
+    credentials: "include",
+    headers,
+    body: body !== undefined ? JSON.stringify(body) : undefined,
+    cache: "no-store",
+  });
+}
+
 async function request<T>(method: string, path: string, body?: unknown): Promise<ApiResult<T>> {
   try {
-    const resp = await fetch(`${API_URL}${path}`, {
-      method,
-      credentials: "include",
-      headers: body !== undefined ? { "Content-Type": "application/json" } : undefined,
-      body: body !== undefined ? JSON.stringify(body) : undefined,
-      cache: "no-store",
-    });
+    let resp = await doFetch(method, path, body);
+
+    // Transparently refresh an expired access token once, then retry.
+    if (resp.status === 401 && !path.startsWith("/api/v1/auth/")) {
+      const refreshed = await fetch(`${API_URL}/api/v1/auth/refresh`, {
+        method: "POST",
+        credentials: "include",
+        cache: "no-store",
+      });
+      if (refreshed.ok) resp = await doFetch(method, path, body);
+    }
 
     if (resp.status === 204) {
       return { ok: true, data: undefined as T };

@@ -80,6 +80,7 @@ def app(db_engine):
     Exposed as its own fixture so tests can add further dependency overrides
     (e.g. a mocked translation service) before issuing requests.
     """
+    from app.core.limiter import limiter
     from app.db.session import get_session
     from app.main import create_app
 
@@ -89,10 +90,14 @@ def app(db_engine):
         async with factory() as session:
             yield session
 
+    # Disable the shared slowapi limiter by default so multi-request tests aren't
+    # throttled by state carried across tests; the rate-limit test re-enables it.
+    limiter.enabled = False
     application = create_app()
     application.dependency_overrides[get_session] = _override_get_session
     yield application
     application.dependency_overrides.clear()
+    limiter.enabled = True
 
 
 @pytest_asyncio.fixture()

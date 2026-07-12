@@ -79,3 +79,10 @@ class PriceSource(StrEnum):
     QUOTE = "quote"
     WEBSITE = "website"
     MANUAL = "manual"
+
+
+class AuthTokenKind(StrEnum):
+    REFRESH = "refresh"
+    MAGIC = "magic"
+    VERIFY = "verify"
+    RESET = "reset"
