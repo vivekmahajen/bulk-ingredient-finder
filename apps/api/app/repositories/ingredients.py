@@ -33,6 +33,13 @@ class IngredientRepository(OrgScopedRepository[Ingredient]):
         result = await self.session.execute(stmt)
         return list(result.scalars().all())
 
+    async def get_alias(self, alias_id: uuid.UUID) -> IngredientAlias | None:
+        stmt = select(IngredientAlias).where(
+            IngredientAlias.org_id == self.org_id, IngredientAlias.id == alias_id
+        )
+        result = await self.session.execute(stmt)
+        return result.scalar_one_or_none()
+
     async def alias_exists(self, ingredient_id: uuid.UUID, alias: str, lang: str) -> bool:
         stmt = (
             select(IngredientAlias.id)

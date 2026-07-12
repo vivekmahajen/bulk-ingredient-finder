@@ -14,6 +14,7 @@ import sys
 from collections.abc import AsyncGenerator
 
 import asyncpg
+import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
@@ -71,12 +72,12 @@ async def db_session(db_engine) -> AsyncGenerator[AsyncSession, None]:
         yield session
 
 
-@pytest_asyncio.fixture()
-async def client(db_engine) -> AsyncGenerator[AsyncClient, None]:
-    """An in-loop async client whose DB session is bound to the test engine.
+@pytest.fixture()
+def app(db_engine):
+    """The FastAPI app with its DB session bound to the test engine.
 
-    Uses ``ASGITransport`` (not ``TestClient``) so the app runs in the same event
-    loop as the test — required for the shared asyncpg engine to work.
+    Exposed as its own fixture so tests can add further dependency overrides
+    (e.g. a mocked translation service) before issuing requests.
     """
     from app.db.session import get_session
     from app.main import create_app
@@ -87,9 +88,19 @@ async def client(db_engine) -> AsyncGenerator[AsyncClient, None]:
         async with factory() as session:
             yield session
 
-    app = create_app()
-    app.dependency_overrides[get_session] = _override_get_session
+    application = create_app()
+    application.dependency_overrides[get_session] = _override_get_session
+    yield application
+    application.dependency_overrides.clear()
+
+
+@pytest_asyncio.fixture()
+async def client(app) -> AsyncGenerator[AsyncClient, None]:
+    """An in-loop async client for ``app``.
+
+    Uses ``ASGITransport`` (not ``TestClient``) so the app runs in the same event
+    loop as the test — required for the shared asyncpg engine to work.
+    """
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
         yield ac
-    app.dependency_overrides.clear()

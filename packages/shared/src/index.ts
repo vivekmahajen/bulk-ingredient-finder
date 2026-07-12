@@ -9,6 +9,7 @@ import { z } from "zod";
  */
 
 export * from "./units";
+export * from "./synonyms";
 
 export const APP_NAME = "Rasoi Radar" as const;
 export const API_VERSION = "api/v1" as const;

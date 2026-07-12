@@ -1,0 +1,132 @@
+{
+  "$comment": "Single source of truth for curated culinary synonyms/translations. Loaded by both packages/shared/src/synonyms.ts (TS) and apps/api/app/synonyms.py (Python). A drift test on each side asserts known pairs. Each group's canonical_en is the English canonical; terms are additional searchable aliases with BCP-47 lang tags (…-Latn = romanized).",
+  "version": 1,
+  "groups": [
+    {
+      "canonical_en": "turmeric",
+      "terms": [
+        { "alias": "haldi", "lang": "hi-Latn" },
+        { "alias": "haldi", "lang": "pa-Latn" },
+        { "alias": "manjal", "lang": "ta-Latn" }
+      ]
+    },
+    {
+      "canonical_en": "cumin",
+      "terms": [
+        { "alias": "jeera", "lang": "hi-Latn" },
+        { "alias": "zeera", "lang": "hi-Latn" },
+        { "alias": "jira", "lang": "hi-Latn" }
+      ]
+    },
+    {
+      "canonical_en": "coriander",
+      "terms": [
+        { "alias": "cilantro", "lang": "en" },
+        { "alias": "dhania", "lang": "hi-Latn" }
+      ]
+    },
+    {
+      "canonical_en": "asafoetida",
+      "terms": [{ "alias": "hing", "lang": "hi-Latn" }]
+    },
+    {
+      "canonical_en": "fenugreek",
+      "terms": [{ "alias": "methi", "lang": "hi-Latn" }]
+    },
+    {
+      "canonical_en": "whole wheat flour",
+      "terms": [
+        { "alias": "atta", "lang": "hi-Latn" },
+        { "alias": "chapati flour", "lang": "en" }
+      ]
+    },
+    {
+      "canonical_en": "all-purpose flour",
+      "terms": [
+        { "alias": "maida", "lang": "hi-Latn" },
+        { "alias": "plain flour", "lang": "en" }
+      ]
+    },
+    {
+      "canonical_en": "gram flour",
+      "terms": [
+        { "alias": "besan", "lang": "hi-Latn" },
+        { "alias": "chickpea flour", "lang": "en" }
+      ]
+    },
+    {
+      "canonical_en": "pigeon peas",
+      "terms": [
+        { "alias": "toor dal", "lang": "hi-Latn" },
+        { "alias": "arhar dal", "lang": "hi-Latn" },
+        { "alias": "tuvar dal", "lang": "hi-Latn" }
+      ]
+    },
+    {
+      "canonical_en": "chickpeas",
+      "terms": [
+        { "alias": "chana", "lang": "hi-Latn" },
+        { "alias": "kabuli chana", "lang": "hi-Latn" },
+        { "alias": "garbanzo beans", "lang": "en" }
+      ]
+    },
+    {
+      "canonical_en": "mung beans",
+      "terms": [
+        { "alias": "moong", "lang": "hi-Latn" },
+        { "alias": "moong dal", "lang": "hi-Latn" }
+      ]
+    },
+    {
+      "canonical_en": "clarified butter",
+      "terms": [{ "alias": "ghee", "lang": "hi-Latn" }]
+    },
+    {
+      "canonical_en": "indian cottage cheese",
+      "terms": [{ "alias": "paneer", "lang": "hi-Latn" }]
+    },
+    {
+      "canonical_en": "cardamom",
+      "terms": [{ "alias": "elaichi", "lang": "hi-Latn" }]
+    },
+    {
+      "canonical_en": "clove",
+      "terms": [{ "alias": "laung", "lang": "hi-Latn" }]
+    },
+    {
+      "canonical_en": "cinnamon",
+      "terms": [{ "alias": "dalchini", "lang": "hi-Latn" }]
+    },
+    {
+      "canonical_en": "curry leaves",
+      "terms": [
+        { "alias": "kadi patta", "lang": "hi-Latn" },
+        { "alias": "kari patta", "lang": "hi-Latn" }
+      ]
+    },
+    {
+      "canonical_en": "spinach",
+      "terms": [{ "alias": "palak", "lang": "hi-Latn" }]
+    },
+    {
+      "canonical_en": "onion",
+      "terms": [{ "alias": "pyaz", "lang": "hi-Latn" }]
+    },
+    {
+      "canonical_en": "tomato",
+      "terms": [{ "alias": "tamatar", "lang": "hi-Latn" }]
+    },
+    {
+      "canonical_en": "ginger",
+      "terms": [{ "alias": "adrak", "lang": "hi-Latn" }]
+    },
+    {
+      "canonical_en": "garlic",
+      "terms": [{ "alias": "lehsun", "lang": "hi-Latn" }]
+    },
+    {
+      "canonical_en": "basmati rice",
+      "terms": [{ "alias": "basmati", "lang": "en" }]
+    }
+  ]
+}
