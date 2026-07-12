@@ -227,7 +227,13 @@ class TranslationService:
         raise TranslationUnavailable(str(last_exc))
 
     async def detect(self, text: str) -> DetectionResult:
-        return await self._guarded(lambda: self.provider.detect(text), op="detect")
+        # Detection must never block ingredient creation — on any provider
+        # failure, fall back to the deterministic script-based guess.
+        try:
+            return await self._guarded(lambda: self.provider.detect(text), op="detect")
+        except TranslationUnavailable:
+            logger.warning("detect_degraded", text=text)
+            return detect_by_script(text)
 
     async def to_english(self, *, display_name: str, source_lang: str) -> TranslationOutcome:
         """Normalize a term to an English canonical name.
