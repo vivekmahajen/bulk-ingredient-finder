@@ -1,16 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { apiPost } from "@/lib/api";
+import { CATEGORIES, DEFAULT_UNITS, FREQUENCIES } from "@/lib/types";
 import {
-  CATEGORIES,
-  DEFAULT_UNITS,
-  FREQUENCIES,
-  type Category,
-  type DefaultUnit,
-  type PurchaseFrequency,
-} from "@/lib/types";
+  parseIngredientTable,
+  type IngredientCreate,
+  type PreviewRow,
+} from "@/lib/ingredient-import";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,15 +21,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useToast } from "@/components/ui/use-toast";
-
-interface IngredientCreate {
-  display_name: string;
-  source_lang?: string | null;
-  category: Category;
-  default_unit: DefaultUnit;
-  purchase_frequency: PurchaseFrequency;
-  par_level?: number | null;
-}
 
 interface BulkRowResult {
   index: number;
@@ -48,80 +37,35 @@ interface BulkResult {
   results: BulkRowResult[];
 }
 
-interface PreviewRow {
-  raw: string;
-  parsed?: IngredientCreate;
-  error?: string;
-}
-
 const FREQ_VALUES = FREQUENCIES.map((f) => f.value);
-
-function isCategory(v: string): v is Category {
-  return (CATEGORIES as readonly string[]).includes(v);
-}
-function isUnit(v: string): v is DefaultUnit {
-  return (DEFAULT_UNITS as readonly string[]).includes(v);
-}
-function isFrequency(v: string): v is PurchaseFrequency {
-  return (FREQ_VALUES as readonly string[]).includes(v);
-}
-
-/** Columns: name, category, unit, frequency?, language?, par_level? (tab-separated) */
-function parseLine(raw: string): PreviewRow {
-  const cells = raw.split("\t").map((c) => c.trim());
-  const [name, categoryStr, unitStr, freqStr, langStr, parStr] = cells;
-
-  if (name === undefined || name.length === 0) return { raw, error: "name is required" };
-  if (categoryStr === undefined || !isCategory(categoryStr))
-    return { raw, error: `category must be one of ${CATEGORIES.join(", ")}` };
-  if (unitStr === undefined || !isUnit(unitStr))
-    return { raw, error: `unit must be one of ${DEFAULT_UNITS.join(", ")}` };
-
-  let frequency: PurchaseFrequency = "weekly";
-  if (freqStr !== undefined && freqStr.length > 0) {
-    if (!isFrequency(freqStr))
-      return { raw, error: `frequency must be one of ${FREQ_VALUES.join(", ")}` };
-    frequency = freqStr;
-  }
-
-  let parLevel: number | null = null;
-  if (parStr !== undefined && parStr.length > 0) {
-    const n = Number(parStr);
-    if (!Number.isFinite(n) || n < 0) return { raw, error: "par_level must be a number ≥ 0" };
-    parLevel = n;
-  }
-
-  const parsed: IngredientCreate = {
-    display_name: name,
-    category: categoryStr,
-    default_unit: unitStr,
-    purchase_frequency: frequency,
-    par_level: parLevel,
-  };
-  if (langStr !== undefined && langStr.length > 0) parsed.source_lang = langStr;
-
-  return { raw, parsed };
-}
 
 export default function BulkIngredientsPage() {
   const { toast } = useToast();
+  const fileInput = useRef<HTMLInputElement>(null);
 
   const [text, setText] = useState("");
   const [preview, setPreview] = useState<PreviewRow[] | null>(null);
+  const [headerMapped, setHeaderMapped] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<BulkResult | null>(null);
 
   const validRows = preview?.filter((r) => r.parsed !== undefined) ?? [];
   const validCount = validRows.length;
 
-  function handlePreview() {
-    const rows = text
-      .split("\n")
-      .map((l) => l.replace(/\r$/, ""))
-      .filter((l) => l.trim().length > 0)
-      .map(parseLine);
+  function runPreview(source: string) {
+    const { headerMapped: mapped, rows } = parseIngredientTable(source);
+    setHeaderMapped(mapped);
     setPreview(rows);
     setResult(null);
+  }
+
+  async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const content = await file.text();
+    setText(content);
+    runPreview(content);
+    if (fileInput.current) fileInput.current.value = ""; // allow re-selecting the same file
   }
 
   async function handleSubmit() {
@@ -158,37 +102,57 @@ export default function BulkIngredientsPage() {
         </Link>
         <h1 className="text-2xl font-semibold tracking-tight">Bulk add ingredients</h1>
         <p className="text-muted-foreground text-sm">
-          Paste tab-separated rows, preview to validate, then submit the valid ones. Names in any
-          language are auto-translated and made searchable.
+          Upload a CSV/TSV or paste rows from a spreadsheet, preview to validate, then submit. Names
+          in any language are auto-translated and made searchable.
         </p>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Paste rows</CardTitle>
+          <CardTitle>Upload or paste</CardTitle>
           <CardDescription>
-            <span className="font-mono text-xs">
-              name&nbsp;&nbsp;category&nbsp;&nbsp;unit&nbsp;&nbsp;frequency(optional)&nbsp;&nbsp;language(optional)&nbsp;&nbsp;par_level(optional)
+            <span className="block">
+              Has a header row with <span className="font-medium">Ingredient</span> and{" "}
+              <span className="font-medium">Category</span>? Columns are auto-mapped —{" "}
+              <span className="font-medium">Category</span>,{" "}
+              <span className="font-medium">Order cadence</span>, and{" "}
+              <span className="font-medium">Purchase as</span> are recognized, and forecast columns
+              (Jan–Dec, Annual) are ignored.
             </span>
-            <br />
-            <span className="text-xs">
-              category: {CATEGORIES.join(", ")} · unit: {DEFAULT_UNITS.join(", ")} · frequency:{" "}
-              {FREQ_VALUES.join(", ")} (default weekly)
+            <span className="mt-1 block">
+              No header? Use:{" "}
+              <span className="font-mono text-xs">
+                name&nbsp;&nbsp;category&nbsp;&nbsp;unit&nbsp;&nbsp;frequency?&nbsp;&nbsp;language?&nbsp;&nbsp;par_level?
+              </span>
+            </span>
+            <span className="text-muted-foreground mt-1 block text-xs">
+              categories: {CATEGORIES.join(", ")} · units: {DEFAULT_UNITS.join(", ")} · cadence:{" "}
+              {FREQ_VALUES.join(", ")}
             </span>
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          <input
+            ref={fileInput}
+            type="file"
+            accept=".csv,.tsv,.txt,text/csv,text/tab-separated-values,text/plain"
+            className="hidden"
+            onChange={(e) => void handleFile(e)}
+          />
           <textarea
             value={text}
             onChange={(e) => setText(e.target.value)}
             spellCheck={false}
             placeholder={
-              "Basmati Rice\tstaple\tkg\tweekly\nहल्दी\tspice\tkg\tmonthly\thi\nPaneer\tdairy\tkg\ttwice_weekly\t\t5"
+              "Ingredient\tCategory\tPurchase as\tOrder cadence\nChicken (boneless)\tProtein\t40 lb case\t2×/week\nWhole milk\tDairy\tGallon\t2×/week"
             }
             className="border-input focus-visible:ring-ring placeholder:text-muted-foreground flex min-h-[200px] w-full rounded-md border bg-transparent px-3 py-2 font-mono text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 disabled:cursor-not-allowed disabled:opacity-50"
           />
           <div className="flex flex-wrap items-center gap-2">
-            <Button type="button" variant="outline" onClick={handlePreview}>
+            <Button type="button" variant="outline" onClick={() => fileInput.current?.click()}>
+              Choose file…
+            </Button>
+            <Button type="button" variant="outline" onClick={() => runPreview(text)}>
               Preview
             </Button>
             <Button
@@ -209,7 +173,8 @@ export default function BulkIngredientsPage() {
           <CardHeader>
             <CardTitle>Preview</CardTitle>
             <CardDescription>
-              {validCount} of {preview.length} row{preview.length === 1 ? "" : "s"} valid.
+              {validCount} of {preview.length} row{preview.length === 1 ? "" : "s"} valid
+              {headerMapped ? " · columns auto-mapped from header" : ""}.
             </CardDescription>
           </CardHeader>
           <CardContent>
