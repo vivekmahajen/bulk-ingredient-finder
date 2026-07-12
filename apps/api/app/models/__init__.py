@@ -1,8 +1,10 @@
 """ORM models. Importing this package registers every table on ``Base.metadata``."""
 
 from app.models.audit import AuditLog
+from app.models.auth_token import AuthToken
 from app.models.enums import (
     AliasKind,
+    AuthTokenKind,
     Category,
     DefaultUnit,
     PriceSource,
@@ -20,6 +22,8 @@ from app.models.user import User
 __all__ = [
     "AliasKind",
     "AuditLog",
+    "AuthToken",
+    "AuthTokenKind",
     "Category",
     "DefaultUnit",
     "Ingredient",
