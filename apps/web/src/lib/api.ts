@@ -17,7 +17,10 @@ export interface Problem {
 
 export type ApiResult<T> = { ok: true; data: T } | { ok: false; status: number; problem: Problem };
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+// Calls are same-origin and proxied to the backend by the Next.js rewrite in
+// next.config.ts (source "/api/:path*"). Same-origin keeps the auth cookies
+// first-party. NEXT_PUBLIC_API_URL configures the proxy target, not the client.
+const API_URL = "";
 
 const MUTATING = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 
