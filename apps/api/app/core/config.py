@@ -3,9 +3,12 @@
 from __future__ import annotations
 
 from functools import lru_cache
+from urllib.parse import urlsplit, urlunsplit
 
 from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+_LOCAL_HOSTS = frozenset({"localhost", "127.0.0.1", "::1", ""})
 
 
 class Settings(BaseSettings):
@@ -55,18 +58,36 @@ class Settings(BaseSettings):
 
     @field_validator("database_url")
     @classmethod
-    def _use_asyncpg_driver(cls, v: str) -> str:
-        """Normalize managed-Postgres URLs to the asyncpg driver.
+    def _normalize_database_url(cls, v: str) -> str:
+        """Make managed-Postgres URLs work with the async (asyncpg) driver.
 
-        Railway/Heroku/Fly inject a libpq-style ``postgres://`` or
-        ``postgresql://`` URL, but the async SQLAlchemy engine needs
-        ``postgresql+asyncpg://``. An explicit ``+driver`` is left untouched.
+        Two fixups:
+        1. Scheme — Railway/Neon/Heroku inject a libpq-style ``postgres://`` /
+           ``postgresql://`` URL, but the async engine needs
+           ``postgresql+asyncpg://``. An explicit ``+driver`` is left untouched.
+        2. Query string — libpq options like ``sslmode`` and ``channel_binding``
+           (e.g. Neon appends ``?sslmode=require&channel_binding=require``) are
+           not valid asyncpg connect kwargs and raise at connect time. Drop them;
+           TLS is configured via connect args instead (see
+           ``database_connect_args``).
         """
         if v.startswith("postgres://"):
-            return "postgresql+asyncpg://" + v[len("postgres://") :]
-        if v.startswith("postgresql://"):
-            return "postgresql+asyncpg://" + v[len("postgresql://") :]
+            v = "postgresql+asyncpg://" + v[len("postgres://") :]
+        elif v.startswith("postgresql://"):
+            v = "postgresql+asyncpg://" + v[len("postgresql://") :]
+        parts = urlsplit(v)
+        if parts.query or parts.fragment:
+            v = urlunsplit((parts.scheme, parts.netloc, parts.path, "", ""))
         return v
+
+    @property
+    def database_connect_args(self) -> dict[str, object]:
+        """asyncpg connect args. Enable TLS for remote hosts (managed Postgres
+        requires it); local dev/test Postgres runs without SSL."""
+        host = urlsplit(self.database_url).hostname or ""
+        if host in _LOCAL_HOSTS:
+            return {}
+        return {"ssl": "require"}
 
     @property
     def is_development(self) -> bool:
