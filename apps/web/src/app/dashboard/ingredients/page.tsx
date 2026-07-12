@@ -57,9 +57,14 @@ export default function IngredientsPage() {
             {ingredients ? `${ingredients.length} in your catalog` : "Loading…"}
           </p>
         </div>
-        <Button asChild>
-          <Link href="/dashboard/ingredients/new">＋ Add ingredient</Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button asChild variant="outline">
+            <Link href="/dashboard/ingredients/bulk">⇪ Bulk upload</Link>
+          </Button>
+          <Button asChild>
+            <Link href="/dashboard/ingredients/new">＋ Add ingredient</Link>
+          </Button>
+        </div>
       </div>
 
       <Input
