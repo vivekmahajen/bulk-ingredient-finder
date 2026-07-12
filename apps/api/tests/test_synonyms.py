@@ -1,11 +1,16 @@
 """Synonym-map drift test (Python side).
 
 Asserts known culinary pairs resolve to the same group. The TS side
-(`apps/web/__tests__/synonyms.test.ts`) asserts the identical pairs; both read
-`packages/shared/culinary_synonyms.json`, so they cannot drift.
+(`apps/web/__tests__/synonyms.test.ts`) asserts the identical pairs. The map is
+vendored into the API package (`app/data/culinary_synonyms.json`) so it ships in
+the image; `test_vendored_copy_matches_shared_source` keeps that copy
+byte-identical to `packages/shared/culinary_synonyms.json`, so the two cannot
+drift.
 """
 
 from __future__ import annotations
+
+from pathlib import Path
 
 import pytest
 
@@ -47,3 +52,16 @@ def test_all_groups_have_terms() -> None:
     groups = load_groups()
     assert len(groups) >= 20
     assert all(g.terms for g in groups)
+
+
+def test_vendored_copy_matches_shared_source() -> None:
+    """The image-shipped copy must stay byte-identical to the shared source."""
+    api_root = Path(__file__).resolve().parents[1]  # apps/api
+    vendored = api_root / "app" / "data" / "culinary_synonyms.json"
+    shared = api_root.parents[1] / "packages" / "shared" / "culinary_synonyms.json"
+    assert vendored.is_file(), f"vendored synonyms missing at {vendored}"
+    assert shared.is_file(), f"shared synonyms missing at {shared}"
+    assert vendored.read_bytes() == shared.read_bytes(), (
+        "app/data/culinary_synonyms.json has drifted from packages/shared/"
+        "culinary_synonyms.json — re-copy the shared file into the API package."
+    )
