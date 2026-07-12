@@ -4,8 +4,23 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { apiGet } from "@/lib/api";
-import type { Ingredient } from "@/lib/types";
+import type { Ingredient, IngredientForecast } from "@/lib/types";
 import type { PriceHistory } from "@/lib/prices";
+
+const FORECAST_MONTHS: ReadonlyArray<[string, keyof IngredientForecast]> = [
+  ["Jan", "jan"],
+  ["Feb", "feb"],
+  ["Mar", "mar"],
+  ["Apr", "apr"],
+  ["May", "may"],
+  ["Jun", "jun"],
+  ["Jul", "jul"],
+  ["Aug", "aug"],
+  ["Sep", "sep"],
+  ["Oct", "oct"],
+  ["Nov", "nov"],
+  ["Dec", "dec"],
+];
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -142,6 +157,62 @@ export default function IngredientDetailPage() {
                 </button>
               }
             />
+          </CardContent>
+        </Card>
+      )}
+
+      {ingredient.forecast && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Demand forecast &amp; sourcing</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3 text-sm">
+            {FORECAST_MONTHS.some(([, k]) => ingredient.forecast?.[k] != null) && (
+              <div className="overflow-x-auto">
+                <div className="flex min-w-[600px] gap-1 text-center text-xs">
+                  {FORECAST_MONTHS.map(([label, k]) => (
+                    <div key={k} className="flex-1">
+                      <div className="text-muted-foreground">{label}</div>
+                      <div className="font-medium">{ingredient.forecast?.[k] ?? "—"}</div>
+                    </div>
+                  ))}
+                  <div className="flex-1">
+                    <div className="text-muted-foreground">Yr</div>
+                    <div className="font-semibold">{ingredient.forecast.annual ?? "—"}</div>
+                  </div>
+                </div>
+              </div>
+            )}
+            {ingredient.forecast.g_ml_per_serving != null && (
+              <p className="text-muted-foreground text-xs">
+                ~{ingredient.forecast.g_ml_per_serving} g/ml per serving
+              </p>
+            )}
+            {ingredient.forecast.recommended_vendor && (
+              <div>
+                <div className="text-muted-foreground text-xs">Recommended vendor</div>
+                <div>{ingredient.forecast.recommended_vendor}</div>
+              </div>
+            )}
+            {ingredient.forecast.vendor_website && (
+              <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs">
+                {ingredient.forecast.vendor_website
+                  .split("·")
+                  .map((w) => w.trim())
+                  .filter((w) => w.length > 0)
+                  .map((host) => (
+                    <a
+                      key={host}
+                      href={host.startsWith("http") ? host : `https://${host}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-primary underline-offset-4 hover:underline"
+                    >
+                      {host}
+                    </a>
+                  ))}
+              </div>
+            )}
           </CardContent>
         </Card>
       )}

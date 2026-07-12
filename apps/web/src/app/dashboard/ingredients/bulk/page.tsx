@@ -118,9 +118,9 @@ export default function BulkIngredientsPage() {
               <span className="font-medium">Order cadence</span>,{" "}
               <span className="font-medium">Purchase as</span>,{" "}
               <span className="font-medium">Recommended vendor</span>, and{" "}
-              <span className="font-medium">Website</span> are recognized (vendor/website + pack are
-              kept in the ingredient&rsquo;s notes), and forecast columns (Jan–Dec, Annual) are
-              ignored.
+              <span className="font-medium">Website</span> are recognized, and the monthly forecast
+              (Jan–Dec, Annual) + per-serving size are captured. Only the ingredient name is
+              required — everything else is optional.
             </span>
             <span className="mt-1 block">
               No header? Use:{" "}

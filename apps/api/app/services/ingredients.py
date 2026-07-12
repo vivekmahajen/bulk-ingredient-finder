@@ -19,7 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.deps import RequestContext
 from app.models.enums import AliasKind
-from app.models.ingredient import Ingredient, IngredientAlias
+from app.models.ingredient import FORECAST_MONTHS, Ingredient, IngredientAlias, IngredientForecast
 from app.schemas.ingredient import IngredientCreate
 from app.services import audit
 from app.services.translation import TranslationService, to_english_cached
@@ -117,6 +117,21 @@ async def add_ingredient(
         add_alias(group.canonical_en, "en", AliasKind.SYNONYM)
         for term in group.terms:
             add_alias(term.alias, term.lang, AliasKind.SYNONYM)
+
+    # 5. Optional demand forecast + sourcing (monthly amounts, serving, vendor).
+    if payload.forecast is not None:
+        f = payload.forecast
+        forecast = IngredientForecast(
+            org_id=ctx.org_id,
+            ingredient_id=ingredient.id,
+            annual=f.annual,
+            g_ml_per_serving=f.g_ml_per_serving,
+            recommended_vendor=f.recommended_vendor,
+            vendor_website=f.vendor_website,
+        )
+        for month in FORECAST_MONTHS:
+            setattr(forecast, month, getattr(f, month))
+        session.add(forecast)
 
     audit.record(
         session,

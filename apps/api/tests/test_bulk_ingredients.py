@@ -120,3 +120,58 @@ async def test_bulk_rejects_empty(db_session: AsyncSession, app, client: AsyncCl
     await _make_org(db_session)
     resp = await client.post("/api/v1/ingredients/bulk", json={"items": []})
     assert resp.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_minimal_add_name_only(db_session: AsyncSession, app, client: AsyncClient) -> None:
+    """Only the ingredient name is required; the rest falls back to defaults."""
+    await _make_org(db_session)
+    _use(app, _EnglishProvider())
+
+    resp = await client.post("/api/v1/ingredients", json={"display_name": "Salt"})
+    assert resp.status_code == 201, resp.text
+    body = resp.json()
+    assert body["category"] == "other"
+    assert body["default_unit"] == "each"
+    assert body["purchase_frequency"] == "weekly"
+    assert body["forecast"] is None
+
+
+@pytest.mark.asyncio
+async def test_add_with_forecast_persists(
+    db_session: AsyncSession, app, client: AsyncClient
+) -> None:
+    await _make_org(db_session)
+    _use(app, _EnglishProvider())
+
+    resp = await client.post(
+        "/api/v1/ingredients",
+        json={
+            "display_name": "Basmati Rice",
+            "source_lang": "en",
+            "category": "staple",
+            "default_unit": "kg",
+            "forecast": {
+                "jan": 71.8,
+                "dec": 78.2,
+                "annual": 1317,
+                "g_ml_per_serving": 75,
+                "recommended_vendor": "Raja Foods / House of Spices",
+                "vendor_website": "rajafoods.com · hosindia.com",
+            },
+        },
+    )
+    assert resp.status_code == 201, resp.text
+    fc = resp.json()["forecast"]
+    assert fc is not None
+    assert fc["jan"] == 71.8
+    assert fc["dec"] == 78.2
+    assert fc["annual"] == 1317
+    assert fc["feb"] is None  # partial months allowed
+    assert fc["recommended_vendor"] == "Raja Foods / House of Spices"
+    assert fc["vendor_website"] == "rajafoods.com · hosindia.com"
+
+    # Round-trips through the list endpoint too.
+    listing = await client.get("/api/v1/ingredients")
+    row = next(i for i in listing.json() if i["canonical_name_en"] == "Basmati Rice")
+    assert row["forecast"]["annual"] == 1317

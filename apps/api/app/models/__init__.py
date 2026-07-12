@@ -12,7 +12,7 @@ from app.models.enums import (
     Role,
     StoreKind,
 )
-from app.models.ingredient import Ingredient, IngredientAlias
+from app.models.ingredient import Ingredient, IngredientAlias, IngredientForecast
 from app.models.org import Org
 from app.models.price import PriceEntry
 from app.models.store import Store
@@ -28,6 +28,7 @@ __all__ = [
     "DefaultUnit",
     "Ingredient",
     "IngredientAlias",
+    "IngredientForecast",
     "Org",
     "PriceEntry",
     "PriceSource",

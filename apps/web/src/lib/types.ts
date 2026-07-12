@@ -25,6 +25,25 @@ export interface IngredientAlias {
   kind: AliasKind;
 }
 
+export interface IngredientForecast {
+  jan: number | null;
+  feb: number | null;
+  mar: number | null;
+  apr: number | null;
+  may: number | null;
+  jun: number | null;
+  jul: number | null;
+  aug: number | null;
+  sep: number | null;
+  oct: number | null;
+  nov: number | null;
+  dec: number | null;
+  annual: number | null;
+  g_ml_per_serving: number | null;
+  recommended_vendor: string | null;
+  vendor_website: string | null;
+}
+
 export interface Ingredient {
   id: string;
   canonical_name_en: string;
@@ -40,6 +59,7 @@ export interface Ingredient {
   created_at: string;
   updated_at: string;
   aliases: IngredientAlias[];
+  forecast: IngredientForecast | null;
 }
 
 /** Language options, each rendered in its own script. */

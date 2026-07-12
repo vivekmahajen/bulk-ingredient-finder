@@ -18,7 +18,7 @@ class IngredientRepository(OrgScopedRepository[Ingredient]):
         stmt = (
             self.scoped()
             .where(Ingredient.id == ingredient_id)
-            .options(selectinload(Ingredient.aliases))
+            .options(selectinload(Ingredient.aliases), selectinload(Ingredient.forecast))
         )
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
@@ -27,7 +27,7 @@ class IngredientRepository(OrgScopedRepository[Ingredient]):
         stmt = (
             self.scoped()
             .where(Ingredient.is_active.is_(True))
-            .options(selectinload(Ingredient.aliases))
+            .options(selectinload(Ingredient.aliases), selectinload(Ingredient.forecast))
             .order_by(Ingredient.canonical_name_en)
         )
         result = await self.session.execute(stmt)
