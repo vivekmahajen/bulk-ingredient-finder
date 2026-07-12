@@ -1,0 +1,15 @@
+# Keep the Docker build context small: the API image only needs apps/api.
+.git
+**/node_modules
+apps/web
+packages
+**/.next
+**/__pycache__
+**/*.pyc
+**/.venv
+**/venv
+**/.pytest_cache
+**/.mypy_cache
+**/.ruff_cache
+apps/api/tests
+**/.env
