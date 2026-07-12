@@ -30,7 +30,10 @@ logger = get_logger("price_discovery")
 
 _ANTHROPIC_BASE = os.environ.get("ANTHROPIC_BASE_URL", "https://api.anthropic.com")
 _ANTHROPIC_VERSION = "2023-06-01"
-_MAX_SELLERS = 8
+_MAX_SELLERS = 6
+# Keep the web search snappy: a handful of searches is enough and each one adds
+# seconds of latency to a synchronous request.
+_MAX_WEB_SEARCHES = 3
 
 
 class DiscoveryUnavailable(Exception):
@@ -64,7 +67,8 @@ def _prompt(q: DiscoveryQuery) -> str:
         f"Find suppliers selling **{q.ingredient_name}**{also} in bulk/wholesale "
         f"quantities for a restaurant, {where}. Prefer cash-and-carry, ethnic "
         f"wholesalers, regional produce/broadline distributors, and reputable "
-        f"national online bulk suppliers that ship to that area. Use web search.\n\n"
+        f"national online bulk suppliers that ship to that area. Use web search, but "
+        f"keep it fast — at most {_MAX_WEB_SEARCHES} quick searches, then answer.\n\n"
         f"Return ONLY a JSON object (no prose, no markdown fences) shaped exactly:\n"
         '{"sellers":[{"name":str,"price_text":str|null,"price_cents":int|null,'
         '"pack_desc":str|null,"pack_qty":number|null,'
@@ -107,13 +111,18 @@ class ClaudeWebSearchProvider:
         last_round_text = ""
         stop_reason: str | None = None
 
-        async with httpx.AsyncClient(timeout=self._timeout_s) as client:
+        timeout = httpx.Timeout(self._timeout_s, connect=10.0)
+        async with httpx.AsyncClient(timeout=timeout) as client:
             for _ in range(self._MAX_ROUNDS):
                 body = {
                     "model": self._model,
-                    "max_tokens": 4096,
+                    "max_tokens": 3000,
                     "tools": [
-                        {"type": "web_search_20250305", "name": "web_search", "max_uses": 5}
+                        {
+                            "type": "web_search_20250305",
+                            "name": "web_search",
+                            "max_uses": _MAX_WEB_SEARCHES,
+                        }
                     ],
                     "messages": messages,
                 }

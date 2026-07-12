@@ -49,7 +49,9 @@ class Settings(BaseSettings):
     discovery_provider: str = "claude"
     anthropic_api_key: str = ""
     discovery_model: str = "claude-sonnet-5"
-    discovery_timeout_s: float = 40.0
+    # Web search can legitimately take a while; the proxy in front of the API
+    # tolerates a long round-trip, so give the upstream call generous headroom.
+    discovery_timeout_s: float = 90.0
 
     # CORS — comma-separated extra origins in addition to localhost defaults.
     cors_origins: str = "http://localhost:3000"
