@@ -4,48 +4,49 @@
 
 @layer base {
   :root {
+    /* MarketMan-inspired: teal primary on an ink-navy neutral scale. */
     --background: 0 0% 100%;
-    --foreground: 240 10% 3.9%;
+    --foreground: 222 47% 11%;
     --card: 0 0% 100%;
-    --card-foreground: 240 10% 3.9%;
+    --card-foreground: 222 47% 11%;
     --popover: 0 0% 100%;
-    --popover-foreground: 240 10% 3.9%;
-    --primary: 240 5.9% 10%;
-    --primary-foreground: 0 0% 98%;
-    --secondary: 240 4.8% 95.9%;
-    --secondary-foreground: 240 5.9% 10%;
-    --muted: 240 4.8% 95.9%;
-    --muted-foreground: 240 3.8% 46.1%;
-    --accent: 240 4.8% 95.9%;
-    --accent-foreground: 240 5.9% 10%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 240 5.9% 90%;
-    --input: 240 5.9% 90%;
-    --ring: 240 5.9% 10%;
-    --radius: 0.5rem;
+    --popover-foreground: 222 47% 11%;
+    --primary: 172 66% 38%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222 47% 11%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215 16% 47%;
+    --accent: 172 55% 94%;
+    --accent-foreground: 175 70% 24%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 172 66% 38%;
+    --radius: 0.7rem;
   }
 
   .dark {
-    --background: 240 10% 3.9%;
-    --foreground: 0 0% 98%;
-    --card: 240 10% 3.9%;
-    --card-foreground: 0 0% 98%;
-    --popover: 240 10% 3.9%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 0 0% 98%;
-    --primary-foreground: 240 5.9% 10%;
-    --secondary: 240 3.7% 15.9%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 240 3.7% 15.9%;
-    --muted-foreground: 240 5% 64.9%;
-    --accent: 240 3.7% 15.9%;
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 240 3.7% 15.9%;
-    --input: 240 3.7% 15.9%;
-    --ring: 240 4.9% 83.9%;
+    --background: 222 47% 8%;
+    --foreground: 210 40% 98%;
+    --card: 222 45% 11%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222 45% 11%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 172 66% 45%;
+    --primary-foreground: 222 47% 8%;
+    --secondary: 217 33% 17%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217 33% 17%;
+    --muted-foreground: 215 20% 65%;
+    --accent: 175 60% 18%;
+    --accent-foreground: 172 66% 80%;
+    --destructive: 0 63% 45%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 217 33% 20%;
+    --input: 217 33% 22%;
+    --ring: 172 66% 45%;
   }
 }
 
@@ -55,5 +56,27 @@
   }
   body {
     @apply bg-background text-foreground;
+    font-feature-settings:
+      "rlig" 1,
+      "calt" 1;
+  }
+}
+
+@layer utilities {
+  /* Signature brand gradient used on the landing hero + brand panels. */
+  .bg-brand-gradient {
+    background-image: linear-gradient(135deg, hsl(175 74% 24%) 0%, hsl(172 66% 38%) 55%, hsl(168 72% 46%) 100%);
+  }
+  .text-gradient {
+    background-image: linear-gradient(120deg, hsl(175 74% 30%), hsl(168 72% 46%));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .grid-fade {
+    background-image:
+      linear-gradient(hsl(214 32% 91% / 0.6) 1px, transparent 1px),
+      linear-gradient(90deg, hsl(214 32% 91% / 0.6) 1px, transparent 1px);
+    background-size: 44px 44px;
   }
 }

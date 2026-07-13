@@ -3,7 +3,9 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import { Camera, Languages, MapPin } from "lucide-react";
 
+import { Logo, LogoMark } from "@/components/brand";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -98,12 +100,47 @@ export default function LoginPage(): React.JSX.Element {
   };
 
   return (
-    <div className="grid min-h-screen place-items-center p-4">
-      <Card className="w-full max-w-sm">
-        <CardHeader>
-          <CardTitle>Rasoi Radar</CardTitle>
-          <CardDescription>Sign in</CardDescription>
-        </CardHeader>
+    <div className="grid min-h-screen lg:grid-cols-2">
+      {/* Brand panel */}
+      <aside className="bg-brand-gradient relative hidden flex-col justify-between overflow-hidden p-10 text-white lg:flex">
+        <div className="grid-fade pointer-events-none absolute inset-0 opacity-10" />
+        <Link href="/" className="relative">
+          <Logo textClassName="text-white" />
+        </Link>
+        <div className="relative">
+          <h2 className="max-w-md text-3xl font-bold leading-tight tracking-tight">
+            The invoices legacy OCR can&apos;t read, finally turned into prices.
+          </h2>
+          <ul className="mt-8 space-y-3 text-teal-50">
+            {[
+              [Camera, "Photograph any invoice — any language"],
+              [Languages, "हल्दी · jeera · cumin — one catalog"],
+              [MapPin, "Cheapest supplier within your radius"],
+            ].map(([Icon, label], i) => (
+              <li key={i} className="flex items-center gap-3">
+                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/15">
+                  <Icon className="h-4 w-4" />
+                </span>
+                <span className="text-sm font-medium">{label as string}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+        <p className="relative text-sm text-teal-100/80">
+          Extraction proposes — humans commit. Nothing enters your price map unreviewed.
+        </p>
+      </aside>
+
+      {/* Form */}
+      <div className="flex min-h-screen items-center justify-center p-4">
+        <Card className="w-full max-w-sm border-none shadow-none sm:border sm:shadow-sm">
+          <CardHeader className="space-y-1">
+            <Link href="/" className="mb-1 inline-flex lg:hidden">
+              <LogoMark />
+            </Link>
+            <CardTitle className="text-2xl">Welcome back</CardTitle>
+            <CardDescription>Sign in to your kitchen&apos;s dashboard.</CardDescription>
+          </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-2 gap-2">
             <Button
@@ -200,10 +237,11 @@ export default function LoginPage(): React.JSX.Element {
             </Link>
           </div>
         </CardContent>
-        <CardFooter className="text-muted-foreground text-xs">
-          Protecting your kitchen’s data.
-        </CardFooter>
-      </Card>
+          <CardFooter className="text-muted-foreground text-xs">
+            Protecting your kitchen&apos;s data.
+          </CardFooter>
+        </Card>
+      </div>
     </div>
   );
 }

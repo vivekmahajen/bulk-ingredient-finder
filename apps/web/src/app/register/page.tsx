@@ -4,7 +4,9 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import zxcvbn from "zxcvbn";
+import { Camera, Check } from "lucide-react";
 
+import { Logo, LogoMark } from "@/components/brand";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -97,13 +99,48 @@ export default function RegisterPage(): React.JSX.Element {
   };
 
   return (
-    <div className="grid min-h-screen place-items-center p-4">
-      <Card className="w-full max-w-sm">
-        <CardHeader>
-          <CardTitle>Create your account</CardTitle>
-          <CardDescription>Set up your kitchen on Rasoi Radar</CardDescription>
-        </CardHeader>
-        <CardContent>
+    <div className="grid min-h-screen lg:grid-cols-2">
+      {/* Brand panel */}
+      <aside className="bg-brand-gradient relative hidden flex-col justify-between overflow-hidden p-10 text-white lg:flex">
+        <div className="grid-fade pointer-events-none absolute inset-0 opacity-10" />
+        <Link href="/" className="relative">
+          <Logo textClassName="text-white" />
+        </Link>
+        <div className="relative">
+          <h2 className="max-w-md text-3xl font-bold leading-tight tracking-tight">
+            Set up your kitchen in a minute.
+          </h2>
+          <ul className="mt-8 space-y-3 text-teal-50">
+            {[
+              "Photograph invoices in any language",
+              "Compare true $/kg across suppliers",
+              "Free to start — no card required",
+            ].map((t) => (
+              <li key={t} className="flex items-center gap-3">
+                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white/15">
+                  <Check className="h-3.5 w-3.5" />
+                </span>
+                <span className="text-sm font-medium">{t}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+        <p className="relative flex items-center gap-2 text-sm text-teal-100/80">
+          <Camera className="h-4 w-4" /> Snap · review · commit — nothing counts until you confirm.
+        </p>
+      </aside>
+
+      {/* Form */}
+      <div className="flex min-h-screen items-center justify-center p-4">
+        <Card className="w-full max-w-sm border-none shadow-none sm:border sm:shadow-sm">
+          <CardHeader className="space-y-1">
+            <Link href="/" className="mb-1 inline-flex lg:hidden">
+              <LogoMark />
+            </Link>
+            <CardTitle className="text-2xl">Create your account</CardTitle>
+            <CardDescription>Set up your kitchen on Rasoi Radar.</CardDescription>
+          </CardHeader>
+          <CardContent>
           {disabled ? (
             <div className="space-y-4">
               <p className="text-sm">
@@ -217,8 +254,9 @@ export default function RegisterPage(): React.JSX.Element {
               </div>
             </form>
           )}
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
