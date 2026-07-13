@@ -181,6 +181,7 @@
     "remove": "Remove {name}",
     "noneSelected": "No ingredients selected yet.",
     "loadByFrequency": "Load by frequency",
+    "freqHelp": "Loads every ingredient at that cadence into your selection — remove any you don't need, then Compare.",
     "thisWeekRun": "This week's run",
     "monthlyRun": "Monthly run",
     "howFar": "How far will you drive?",

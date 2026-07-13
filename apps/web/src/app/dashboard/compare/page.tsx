@@ -154,6 +154,13 @@ export default function ComparePage() {
       setLoading(true);
       try {
         const res = await fetchFrequencyRun(frequency, radiusKm, includeDelivery);
+        // Reflect the loaded run as editable chips, so what's shown IS what's
+        // compared — the user can trim any ingredient they didn't want.
+        if (res) {
+          setSelected(
+            res.ingredients.map((i) => ({ id: i.ingredient_id, name: i.canonical_name_en })),
+          );
+        }
         setResult(res);
       } finally {
         setLoading(false);
@@ -240,6 +247,7 @@ export default function ComparePage() {
           {/* Load by frequency */}
           <div className="space-y-2">
             <p className="text-sm font-medium">{t("loadByFrequency")}</p>
+            <p className="text-muted-foreground text-xs">{t("freqHelp")}</p>
             <div className="flex flex-wrap gap-2">
               <Button variant="default" onClick={() => runFrequency("weekly")} disabled={loading}>
                 {t("thisWeekRun")}

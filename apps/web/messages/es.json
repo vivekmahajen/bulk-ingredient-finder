@@ -181,6 +181,7 @@
     "remove": "Quitar {name}",
     "noneSelected": "Aún no hay ingredientes seleccionados.",
     "loadByFrequency": "Cargar por frecuencia",
+    "freqHelp": "Carga en tu selección todos los ingredientes de esa frecuencia — quita los que no necesites y pulsa Comparar.",
     "thisWeekRun": "Compra de esta semana",
     "monthlyRun": "Compra mensual",
     "howFar": "¿Hasta dónde conducirás?",
