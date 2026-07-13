@@ -73,6 +73,53 @@ async def _seed_golden(session: AsyncSession) -> tuple[uuid.UUID, dict[str, uuid
 
 
 @pytest.mark.asyncio
+async def test_radius_ignored_without_home_location(
+    db_session: AsyncSession, client: AsyncClient
+) -> None:
+    # A supplier with no coordinates, no delivery, and an org with no home
+    # location: a radius should NOT hide it (we can't compute distance), and a
+    # note should explain how to enable distance filtering.
+    org = Org(name="No Home")
+    db_session.add(org)
+    await db_session.flush()
+    store = Store(org_id=org.id, name="Local Wholesaler", kind=StoreKind.CASH_AND_CARRY)
+    rice = Ingredient(
+        org_id=org.id,
+        canonical_name_en="Rice",
+        display_name="Rice",
+        category=Category.STAPLE,
+        default_unit=DefaultUnit.KG,
+        purchase_frequency=PurchaseFrequency.WEEKLY,
+    )
+    db_session.add_all([store, rice])
+    await db_session.flush()
+    db_session.add(
+        PriceEntry(
+            org_id=org.id,
+            ingredient_id=rice.id,
+            store_id=store.id,
+            pack_desc="1 kg",
+            pack_qty=Decimal(1),
+            pack_unit=PackUnit.KG,
+            price_cents=500,
+            observed_at=dt.date.today(),
+            source=PriceSource.INVOICE,
+        )
+    )
+    await db_session.commit()
+
+    resp = await client.get(
+        "/api/v1/compare",
+        params={"ingredient_ids": [str(rice.id)], "radius_km": 25, "include_delivery": "false"},
+    )
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    options = body["ingredients"][0]["options"]
+    assert [o["store_name"] for o in options] == ["Local Wholesaler"]
+    assert any("set your location" in n.lower() for n in body["notes"])
+
+
+@pytest.mark.asyncio
 async def test_ranking_golden(db_session: AsyncSession, client: AsyncClient) -> None:
     _, ids = await _seed_golden(db_session)
     resp = await client.get(

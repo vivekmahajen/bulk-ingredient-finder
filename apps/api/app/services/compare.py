@@ -67,26 +67,32 @@ async def _eligible_stores(
     ctx: RequestContext,
     radius_km: float | None,
     include_delivery: bool,
-) -> tuple[dict[uuid.UUID, float | None], set[uuid.UUID], int]:
+) -> tuple[dict[uuid.UUID, float | None], set[uuid.UUID], int, bool]:
     org = await OrgRepository(session).get(ctx.org_id)
-    center = (
-        (float(org.home_lat), float(org.home_lng))
-        if org and org.home_lat is not None and org.home_lng is not None
-        else (None, None)
-    )
+    center: tuple[float | None, float | None]
+    if org is not None and org.home_lat is not None and org.home_lng is not None:
+        center = (float(org.home_lat), float(org.home_lng))
+        has_center = True
+    else:
+        center = (None, None)
+        has_center = False
     rows = await StoreRepository(session, ctx.org_id).list_stores(
         center_lat=center[0], center_lng=center[1]
     )
+    # A radius is only meaningful once we know where "here" is. Without a home
+    # location every distance is unknown, so filtering by it would silently hide
+    # every non-delivering supplier — treat the radius as "any distance" instead.
+    effective_radius = radius_km if has_center else None
     distances: dict[uuid.UUID, float | None] = {}
     eligible: set[uuid.UUID] = set()
     for r in rows:
         dist = float(r.distance_km) if r.distance_km is not None else None
         distances[r.id] = dist
-        if radius_km is None:
+        if effective_radius is None:
             eligible.add(r.id)
-        elif (dist is not None and dist <= radius_km) or (include_delivery and r.delivers):
+        elif (dist is not None and dist <= effective_radius) or (include_delivery and r.delivers):
             eligible.add(r.id)
-    return distances, eligible, len(rows)
+    return distances, eligible, len(rows), has_center
 
 
 async def compare(
@@ -103,7 +109,7 @@ async def compare(
     quantities = quantities or {}
     notes: list[str] = []
 
-    distances, eligible_ids, store_count = await _eligible_stores(
+    distances, eligible_ids, store_count, has_center = await _eligible_stores(
         session, ctx, radius_km, include_delivery
     )
     repo = CompareRepository(session, ctx.org_id)
@@ -176,7 +182,12 @@ async def compare(
         price_matrix[ing.id] = {p.store_id: p for p in priced}
 
     basket = _basket_summary(ingredients, price_matrix, quantities, notes)
-    if radius_km is not None and not eligible_ids:
+    if radius_km is not None and not has_center:
+        notes.append(
+            "Showing all suppliers — set your location (Stores → set location) to filter by "
+            "distance."
+        )
+    elif radius_km is not None and not eligible_ids:
         notes.append("No stores fall within the radius or offer delivery.")
 
     return CompareResponse(
