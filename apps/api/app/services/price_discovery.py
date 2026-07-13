@@ -31,9 +31,9 @@ logger = get_logger("price_discovery")
 _ANTHROPIC_BASE = os.environ.get("ANTHROPIC_BASE_URL", "https://api.anthropic.com")
 _ANTHROPIC_VERSION = "2023-06-01"
 _MAX_SELLERS = 6
-# Keep the web search snappy: a handful of searches is enough and each one adds
-# seconds of latency to a synchronous request.
-_MAX_WEB_SEARCHES = 3
+# Enough searches to actually open listing pages and read prices — pricing
+# takes a couple of extra lookups beyond just naming a seller.
+_MAX_WEB_SEARCHES = 6
 
 
 class DiscoveryUnavailable(Exception):
@@ -65,21 +65,33 @@ def _prompt(q: DiscoveryQuery) -> str:
     )
     return (
         f"Find suppliers selling **{q.ingredient_name}**{also} in bulk/wholesale "
-        f"quantities for a restaurant, {where}. Prefer cash-and-carry, ethnic "
-        f"wholesalers, regional produce/broadline distributors, and reputable "
-        f"national online bulk suppliers that ship to that area. Use web search, but "
-        f"keep it fast — at most {_MAX_WEB_SEARCHES} quick searches, then answer.\n\n"
+        f"quantities for a restaurant, {where}, AND the actual price each one "
+        f"charges.\n\n"
+        "Your #1 job is to return REAL, CURRENT prices — not just names. For each "
+        "candidate seller, OPEN its product / pricing page and read the listed price "
+        "for a bulk pack (e.g. a 20 lb bag, a #10 case). Use up to "
+        f"{_MAX_WEB_SEARCHES} searches and read the actual listings, don't stop at the "
+        "first result snippet.\n\n"
+        "Strongly prefer sellers whose price is publicly listed online so the user "
+        "sees a concrete number — reputable national restaurant-supply and bulk "
+        "retailers (e.g. WebstaurantStore, Amazon Business, Costco Business, Restaurant "
+        "Depot online, ethnic-grocery e-commerce) usually publish prices. Also include "
+        "nearby cash-and-carry / ethnic wholesalers / produce houses even if their "
+        "price is gated.\n\n"
         f"Return ONLY a JSON object (no prose, no markdown fences) shaped exactly:\n"
         '{"sellers":[{"name":str,"price_text":str|null,"price_cents":int|null,'
         '"pack_desc":str|null,"pack_qty":number|null,'
         '"pack_unit":"kg"|"g"|"lb"|"oz"|"l"|"ml"|"gal"|"each"|null,'
         '"url":str|null,"location":str|null,"distance_note":str|null,'
         '"snippet":str|null}],"notes":[str]}\n\n'
-        "Rules: price_cents is the TOTAL pack price in US cents as an integer when a "
-        "concrete price is found, else null. pack_qty/pack_unit describe that pack "
-        f"(e.g. 40 + 'lb'). Include at most {_MAX_SELLERS} sellers, best/cheapest first. "
-        "Put any caveats (stale pricing, membership required, delivery only) in notes. "
-        "Never invent prices — use null when unknown."
+        "Rules: price_cents is the TOTAL pack price in US cents (integer) read from the "
+        "seller's listing; pack_qty/pack_unit describe that pack (e.g. 20 + 'lb'). set "
+        "url to the exact product/pricing page you read the price from. When a price is "
+        "genuinely not public (login/quote/membership only), still list the seller but "
+        "put a short reason in price_text (e.g. 'Login required for price') and leave "
+        "price_cents null. Never invent a number — but do the extra searches needed to "
+        f"attach a real price to as many sellers as possible. At most {_MAX_SELLERS} "
+        "sellers, cheapest concrete price first, unpriced sellers last."
     )
 
 
